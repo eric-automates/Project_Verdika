@@ -1,1 +1,93 @@
+/*
+=============================================================================
+File: styles.css
+Project: Project_Verdika
+Description: Global stylesheet utilizing top-level CSS variables, BEM naming,
+             and a mobile-first responsive approach.
+Architecture Rules:
+  - Uses BEM (Block__Element--Modifier) convention for all UI components to maintain strict modularity.
+  - Uses a CSS Reset to ensure cross-browser consistency.
+  - Never use the !important flag. Control overrides via accurate CSS specificity.
+Mandatory Update Points:
+  - Any new thematic colors or global spacing metrics MUST be defined in the :root variables.
+  - Component-specific styles must be isolated and not bleed into global tags.
+=============================================================================
+*/
 
+/* --- 1. CSS RESET --- */
+/* Resets all default browser styles to maintain consistency across all devices[span_0](start_span)[span_0](end_span). */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* --- 2. TOP-LEVEL VARIABLES (Thematic Consistency) --- */
+/* Unified variable system ensures changing a color updates the entire app seamlessly. */
+:root {
+    /* Beskar Crafting & Armor Stages */
+    --color-durasteel-rust: #8b5a2b;
+    --color-beskar-silver: #c0c0c0;
+    --color-honor-red: #8b0000;
+    --color-gold: #ffd700;
+    --color-reliability-blue: #4682b4;
+    --color-lust-orange: #ff8c00;
+    --color-dark-bg: #121212;
+
+    /* Typography with Fallback Fonts[span_1](start_span)[span_1](end_span) */
+    --font-primary: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+    /* Spacing System */
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+}
+
+/* --- 3. BASE STYLES & MOBILE-FIRST LAYOUT --- */
+/* Base styles optimized for smooth rendering on mobile displays.
+   Using a mobile-first approach: default styles target narrow screens[span_2](start_span)[span_2](end_span). */
+body {
+    background-color: var(--color-dark-bg);
+    color: var(--color-beskar-silver);
+    font-family: var(--font-primary);
+    line-height: 1.6;
+}
+
+/* --- 4. BEM COMPONENT STYLING --- */
+/* Block: Main Menu */
+.main-menu {
+    display: flex;
+    flex-direction: column;
+    padding: var(--spacing-lg);
+}
+
+/* Element: Menu Button */
+.main-menu__button {
+    background-color: var(--color-durasteel-rust);
+    color: #ffffff;
+    padding: var(--spacing-md);
+    border: none;
+    border-radius: 4px;
+    margin-bottom: var(--spacing-sm);
+    cursor: pointer;
+}
+
+/* Modifier: Menu Button (Primary Action) */
+.main-menu__button--primary {
+    background-color: var(--color-honor-red);
+    font-weight: bold;
+}
+
+/* --- 5. RESPONSIVE MEDIA QUERIES --- */
+/* Scales layout up for larger tablet or desktop screens[span_3](start_span)[span_3](end_span). */
+@media screen and (min-width: 768px) {
+    .main-menu {
+        flex-direction: row;
+        justify-content: space-between;
+    }
+    
+    .main-menu__button {
+        margin-bottom: 0;
+        margin-right: var(--spacing-sm);
+    }
+}
