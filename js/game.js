@@ -180,7 +180,6 @@ const VerdikaGame = (function() {
 
                 if (distance > 5) { // Deadzone to prevent jitter
                     // Scale speed based on drag distance, capped at maxSpeed
-                    // A drag distance of 100 pixels represents max speed.
                     const speedMultiplier = Math.min(distance / 100, 1);
                     const currentSpeed = this.maxSpeed * speedMultiplier;
 
@@ -327,7 +326,7 @@ const VerdikaGame = (function() {
             ACTIVE_ENTITIES.enemies.forEach(e => {
                 const dist = Math.hypot(p.x - e.x, p.y - e.y);
                 if (dist < p.radius + e.radius) {
-                    // Simple collision damage logic (needs cooldown/i-frames for real game)
+                    // Simple collision damage logic
                     p.hp -= e.damage * 0.05; // Arbitrary tick damage
 
                     if (p.hp <= 0) {
@@ -432,6 +431,34 @@ const VerdikaGame = (function() {
                 document.getElementById('game-over').style.display = 'none';
                 document.getElementById('main-menu').style.display = 'flex';
                 resetGame();
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            });
+
+            // --- CUSTOM EVENT LISTENERS ---
+            // Listens for events dispatched by utilities.js to handle pausing and quitting[span_10](start_span)[span_10](end_span)
+            window.addEventListener('verdikaPauseGame', () => {
+                gameState.isRunning = false; // Halts the requestAnimationFrame loop
+            });
+
+            window.addEventListener('verdikaResumeGame', () => {
+                if (!gameState.isRunning) {
+                    gameState.isRunning = true;
+                    inputState.lastInteractionTime = Date.now(); // Prevents instant idle timeout on resume
+                    requestAnimationFrame(gameLoop);
+                }
+            });
+
+            window.addEventListener('verdikaQuitToMenu', () => {
+                gameState.isRunning = false;
+                
+                // Calculates final scrap, clears game entities, and saves progress
+                saveProgress(); 
+                
+                document.getElementById('main-menu').style.display = 'flex';
+                document.getElementById('game-over').style.display = 'none';
+                
+                resetGame();
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
             });
         }
     };
@@ -440,4 +467,3 @@ const VerdikaGame = (function() {
 document.addEventListener('DOMContentLoaded', () => {
     VerdikaGame.init();
 });
-    
