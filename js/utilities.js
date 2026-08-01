@@ -52,7 +52,7 @@ const VerdikaUtilities = (function() {
 
     /**
      * Populates the Threat Assessment Log.
-     * Generates an exact SVG replica of the in-game canvas entity (Circle + Facing Visor Wedge + Healthbar).
+     * Generates an exact SVG replica of the in-game canvas entity.
      */
     function initThreatLog() {
         elements.btnThreatLog.addEventListener('click', () => {
@@ -65,16 +65,12 @@ const VerdikaUtilities = (function() {
                 const card = document.createElement('div');
                 card.className = 'threat-card';
                 
-                // SVG representation matching canvas render (Circle, 90deg visor wedge facing right, healthbar above)
                 const svgVisual = `
                 <div class="threat-card__visual">
                     <svg width="65" height="65" viewBox="0 0 65 65">
-                        <!-- Overhead Health Bar -->
                         <rect x="12.5" y="6" width="40" height="4" fill="red" rx="1"/>
                         <rect x="12.5" y="6" width="40" height="4" fill="green" rx="1"/>
-                        <!-- Facing Visor Wedge (Semi-circle shadow highlight) -->
                         <path d="M 32.5 35 L 50.5 22.5 A 18 18 0 0 1 50.5 47.5 Z" fill="rgba(255, 255, 255, 0.45)"/>
-                        <!-- Core Body -->
                         <circle cx="32.5" cy="35" r="${Math.min(data.radius * 1.1, 16)}" fill="${data.color}" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
                     </svg>
                 </div>`;
@@ -179,7 +175,7 @@ const VerdikaUtilities = (function() {
         updateGauges(fps, dom, mem) {
             if (elements.healthGaugesTarget) {
                 elements.healthGaugesTarget.innerHTML = `
-                    <p>Version: 1.0.5 | Offline-first survival roguelite.</p>
+                    <p>Version: 1.0.6 | Offline-first survival roguelite.</p>
                     <h4>Diagnostic Gauges</h4>
                     <p>FPS Engine: ${fps}%</p>
                     <p>DOM Bloat: ${dom}%</p>
@@ -202,7 +198,7 @@ const VerdikaUtilities = (function() {
                 notes = JSON.parse(savedNotes);
             }
         } catch (e) {
-            console.warn('OpSec: LocalStorage access blocked. Proceeding with default Parking Lot.');
+            console.warn('OpSec: LocalStorage access blocked.');
         }
 
         elements.parkingLot.innerHTML = '<h3>Parking Lot Backlog</h3>';
