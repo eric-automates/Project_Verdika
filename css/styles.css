@@ -15,7 +15,7 @@ Mandatory Update Points:
 */
 
 /* --- 1. CSS RESET --- */
-/* Resets all default browser styles to maintain consistency across all devices[span_4](start_span)[span_4](end_span). */
+/* Resets all default browser styles to maintain consistency across all devices. */
 * {
     margin: 0;
     padding: 0;
@@ -34,7 +34,7 @@ Mandatory Update Points:
     --color-lust-orange: #ff8c00;
     --color-dark-bg: #121212;
 
-    /* Typography with Fallback Fonts[span_5](start_span)[span_5](end_span) */
+    /* Typography with Fallback Fonts */
     --font-primary: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 
     /* Spacing System */
@@ -45,7 +45,7 @@ Mandatory Update Points:
 
 /* --- 3. BASE STYLES & MOBILE-FIRST LAYOUT --- */
 /* Base styles optimized for smooth rendering on mobile displays.
-   Using a mobile-first approach: default styles target narrow screens[span_6](start_span)[span_6](end_span). */
+   Using a mobile-first approach: default styles target narrow screens. */
 body {
     background-color: var(--color-dark-bg);
     color: var(--color-beskar-silver);
@@ -60,6 +60,8 @@ body {
     display: flex;
     flex-direction: column;
     padding: var(--spacing-lg);
+    /* Push the main menu down so it isn't hidden by the new absolute header */
+    margin-top: 50px; 
 }
 
 /* Element: Menu Button */
@@ -80,7 +82,7 @@ body {
 }
 
 /* Modals and Popups */
-/* Extracted from the media query to ensure mobile-first rendering[span_7](start_span)[span_7](end_span). */
+/* Extracted from the media query to ensure mobile-first rendering. */
 .modal-panel {
     background-color: var(--color-dark-bg);
     color: var(--color-beskar-silver);
@@ -104,7 +106,7 @@ dialog::backdrop {
 }
 
 /* --- 5. RESPONSIVE MEDIA QUERIES --- */
-/* Scales layout up for larger tablet or desktop screens[span_8](start_span)[span_8](end_span). */
+/* Scales layout up for larger tablet or desktop screens. */
 @media screen and (min-width: 768px) {
     .main-menu {
         flex-direction: row;
@@ -116,3 +118,43 @@ dialog::backdrop {
         margin-right: var(--spacing-sm);
     }
 }
+
+/* --- 6. UTILITIES LAYER (Header/Nav) --- */
+/* Absolute positioning to overlay the canvas, pointer-events managed to prevent blocking game drag inputs */
+header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: var(--spacing-sm) var(--spacing-md);
+    z-index: 100;
+    pointer-events: none; /* Let clicks pass through empty header space down to the canvas */
+}
+
+nav {
+    display: flex;
+    justify-content: space-between;
+}
+
+nav button {
+    background-color: var(--color-durasteel-rust);
+    color: #ffffff;
+    border: 1px solid var(--color-beskar-silver);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: 4px;
+    font-family: var(--font-primary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    pointer-events: auto; /* Re-enable clicks for actual buttons */
+}
+
+#dropdown-about {
+    pointer-events: auto; /* Ensure clicks inside the dropdown register */
+    margin-top: var(--spacing-sm);
+}
+
+#health-gauges {
+    font-size: 0.85rem;
+    color: var(--color-reliability-blue);
+  }
+      
