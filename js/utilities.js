@@ -8,7 +8,7 @@
  *   - Zero-Dependency: Pure Vanilla JavaScript, no external libraries.
  *   - OpSec/Privacy: Uses strictly LocalStorage for saving Parking Lot notes.
  *   - DOM Interaction: Hooks into the semantic HTML5 foundation without inline 
- *     styles to separate content from presentation[span_5](start_span)[span_5](end_span).
+ *     styles to separate content from presentation.
  * Mandatory Update Points:
  *   - To add new gauges, append calculation methods to the HealthMonitor class.
  *   - Any DOM queries must align with the semantic tags in index.html.
@@ -17,22 +17,24 @@
 
 const VerdikaUtilities = (function() {
 
-    const elements = {
-        btnHelp: document.getElementById('btn-help'),
-        btnPause: document.getElementById('btn-pause'),
-        btnSettingsMain: document.getElementById('btn-settings-main'),
-        btnCloseSettings: document.getElementById('btn-close-settings'),
-        btnResumeGame: document.getElementById('btn-resume-game'),
-        btnQuitGame: document.getElementById('btn-quit-game'),
-        btnConfirmQuit: document.getElementById('btn-confirm-quit'),
-        btnCancelQuit: document.getElementById('btn-cancel-quit'),
-        
-        aboutDropdown: document.getElementById('dropdown-about'),
-        parkingLot: document.getElementById('parking-lot'),
-        modalSettings: document.getElementById('modal-settings'),
-        modalQuitConfirm: document.getElementById('modal-quit-confirm'),
-        healthGaugesTarget: document.getElementById('health-gauges')
-    };
+    // Delay hydration so script execution in the <head> doesn't return null references
+    const elements = {};
+
+    function hydrateElements() {
+        elements.btnHelp = document.getElementById('btn-help');
+        elements.btnPause = document.getElementById('btn-pause');
+        elements.btnSettingsMain = document.getElementById('btn-settings-main');
+        elements.btnCloseSettings = document.getElementById('btn-close-settings');
+        elements.btnResumeGame = document.getElementById('btn-resume-game');
+        elements.btnQuitGame = document.getElementById('btn-quit-game');
+        elements.btnConfirmQuit = document.getElementById('btn-confirm-quit');
+        elements.btnCancelQuit = document.getElementById('btn-cancel-quit');
+        elements.aboutDropdown = document.getElementById('dropdown-about');
+        elements.parkingLot = document.getElementById('parking-lot');
+        elements.modalSettings = document.getElementById('modal-settings');
+        elements.modalQuitConfirm = document.getElementById('modal-quit-confirm');
+        elements.healthGaugesTarget = document.getElementById('health-gauges');
+    }
 
     /**
      * Initializes the Help Button overlay.
@@ -46,7 +48,7 @@ const VerdikaUtilities = (function() {
 
     /**
      * Initializes all UI button hooks for the Settings menus and Quit confirmations.
-     * Uses HTML5 <dialog> methods natively[span_6](start_span)[span_6](end_span).
+     * Uses HTML5 <dialog> methods natively.
      */
     function initModals() {
         // Open Settings from Main Menu
@@ -139,7 +141,7 @@ const VerdikaUtilities = (function() {
         updateGauges(fps, dom, mem) {
             if (elements.healthGaugesTarget) {
                 elements.healthGaugesTarget.innerHTML = `
-                    <p>Version: 1.0.0 | Offline-first survival roguelite.</p>
+                    <p>Version: 1.0.1 | Offline-first survival roguelite.</p>
                     <h4>Diagnostic Gauges</h4>
                     <p>FPS Engine: ${fps}%</p>
                     <p>DOM Bloat: ${dom}%</p>
@@ -163,6 +165,7 @@ const VerdikaUtilities = (function() {
 
     return {
         init: function() {
+            hydrateElements(); // Safe to run now that DOMContentLoaded fired
             initHelp();
             initModals();
             initParkingLot();
