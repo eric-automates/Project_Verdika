@@ -5,13 +5,11 @@
  * Description: Mandatory Utilities Layer containing the Help guide, About 
  *              dropdown, Settings Modals, real-time Health Gauges, and the Parking Lot backlog.
  * Architecture Rules:
- *   - Zero-Dependency: Pure Vanilla JavaScript, no external libraries.
- *   - OpSec/Privacy: Gracefully handles LocalStorage security blocks common in privacy browsers.
- *   - DOM Interaction: Hooks into the semantic HTML5 foundation without inline 
- *     styles to separate content from presentation. Uses standardized <dialog> element.
+ *   - Zero-Dependency: Pure Vanilla JavaScript, no external libraries[span_12](start_span)[span_12](end_span).
+ *   - OpSec/Privacy: Gracefully handles LocalStorage security blocks common in privacy browsers[span_13](start_span)[span_13](end_span).
+ *   - DOM Interaction: Hooks into the semantic HTML5 foundation without inline styles[span_14](start_span)[span_14](end_span).
  * Mandatory Update Points:
  *   - To add new gauges, append calculation methods to the HealthMonitor class.
- *   - Any DOM queries must align with the semantic tags in index.html.
  * =============================================================================
  */
 
@@ -42,7 +40,6 @@ const VerdikaUtilities = (function() {
 
     /**
      * Initializes the Help Button overlay.
-     * Dispatches events so the game.js loop can pause/resume gracefully if active.
      */
     function initHelp() {
         elements.btnHelp.addEventListener('click', () => {
@@ -50,7 +47,6 @@ const VerdikaUtilities = (function() {
             elements.aboutDropdown.style.display = isHidden ? 'block' : 'none';
             elements.btnHelp.textContent = isHidden ? 'Return' : 'Help';
 
-            // Dispatch global hooks for game.js
             if (isHidden) {
                 window.dispatchEvent(new Event('verdikaHelpOpened'));
             } else {
@@ -61,31 +57,43 @@ const VerdikaUtilities = (function() {
 
     /**
      * Populates the Threat Assessment Log utilizing data straight from game.js
-     * Single Source of Truth: Prevents having duplicate stats in HTML.
+     * Fix: Ensure we tap into window.VerdikaGame explicitly.
      */
     function initThreatLog() {
         elements.btnThreatLog.addEventListener('click', () => {
             elements.modalThreatLog.showModal();
-            elements.threatList.innerHTML = ''; // Clear prior
+            elements.threatList.innerHTML = ''; 
 
             const enemies = window.VerdikaGame ? window.VerdikaGame.getEnemyDictionary() : {};
 
             for (const [key, data] of Object.entries(enemies)) {
                 const card = document.createElement('div');
                 card.className = 'threat-card';
+                
+                // SVG representation mimicking canvas render logic (circle + visor)
+                const svgVisual = `
+                <div class="threat-card__visual">
+                    <svg width="60" height="60" viewBox="0 0 60 60">
+                        <circle cx="30" cy="30" r="${Math.min(data.radius * 1.5, 25)}" fill="${data.color}" />
+                        <path d="M 15 25 Q 30 40 45 25" stroke="rgba(255, 255, 255, 0.6)" stroke-width="4" fill="none" stroke-linecap="round"/>
+                    </svg>
+                </div>`;
+
                 card.innerHTML = `
-                    <h4>Class: ${key}</h4>
-                    <p><strong>Type:</strong> ${data.type.toUpperCase()}</p>
-                    <p><strong>Base HP:</strong> ${data.hp} | <strong>Speed:</strong> ${data.speed}</p>
-                    <p><strong>Behavioral Analysis:</strong> ${data.behavior}</p>
-                    <p><strong>Pros:</strong> ${data.pros}</p>
-                    <p><strong>Cons:</strong> ${data.cons}</p>
-                    <div style="display:inline-block; width:20px; height:20px; background-color:${data.color}; border-radius:50%; margin-top:8px;"></div>
+                    ${svgVisual}
+                    <div class="threat-card__info">
+                        <h4>${key} <span class="badge" style="background-color: ${data.color};">${data.type.toUpperCase()}</span></h4>
+                        <p><strong>Base HP:</strong> ${data.hp} | <strong>Speed:</strong> ${data.speed} | <strong>Damage:</strong> ${data.damage}</p>
+                        <p><strong>Behavior:</strong> ${data.behavior}</p>
+                        <p><strong>Pros:</strong> ${data.pros}</p>
+                        <p><strong>Cons:</strong> ${data.cons}</p>
+                    </div>
                 `;
                 elements.threatList.appendChild(card);
             }
         });
 
+        // Use the close button OR clicking outside the modal (handled via standard dialog methods if desired)
         elements.btnCloseThreatLog.addEventListener('click', () => {
             elements.modalThreatLog.close();
         });
@@ -172,7 +180,7 @@ const VerdikaUtilities = (function() {
         updateGauges(fps, dom, mem) {
             if (elements.healthGaugesTarget) {
                 elements.healthGaugesTarget.innerHTML = `
-                    <p>Version: 1.0.3 | Offline-first survival roguelite.</p>
+                    <p>Version: 1.0.4 | Offline-first survival roguelite.</p>
                     <h4>Diagnostic Gauges</h4>
                     <p>FPS Engine: ${fps}%</p>
                     <p>DOM Bloat: ${dom}%</p>
