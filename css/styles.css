@@ -5,12 +5,11 @@ Project: Project_Verdika
 Description: Global stylesheet utilizing top-level CSS variables, BEM naming,
              and a mobile-first responsive approach.
 Architecture Rules:
-  - Uses BEM (Block__Element--Modifier) convention for all UI components to maintain strict modularity.
-  - Uses a CSS Reset to ensure cross-browser consistency.
-  - Never use the !important flag. Control overrides via accurate CSS specificity.
+  - Uses BEM (Block__Element--Modifier) convention for all UI components[span_8](start_span)[span_8](end_span).
+  - Uses a CSS Reset to ensure cross-browser consistency[span_9](start_span)[span_9](end_span).
+  - Never use the !important flag. Control overrides via accurate CSS specificity[span_10](start_span)[span_10](end_span).
 Mandatory Update Points:
-  - Any new thematic colors or global spacing metrics MUST be defined in the :root variables.
-  - Component-specific styles must be isolated and not bleed into global tags.
+  - Any new thematic colors or global spacing metrics MUST be defined in the :root variables[span_11](start_span)[span_11](end_span).
 =============================================================================
 */
 
@@ -29,14 +28,18 @@ Mandatory Update Points:
     --color-gold: #ffd700;
     --color-reliability-blue: #4682b4;
     --color-lust-orange: #ff8c00;
-    --color-dark-bg: #121212;
-    --color-panel-bg: #1e1e1e;
+    --color-dark-bg: #0a0a0a;
+    --color-panel-bg: rgba(30, 30, 30, 0.65);
+    
+    --glow-primary: 0 0 15px rgba(139, 0, 0, 0.6);
+    --glow-secondary: 0 0 10px rgba(192, 192, 192, 0.3);
 
     --font-primary: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 
     --spacing-sm: 8px;
     --spacing-md: 16px;
     --spacing-lg: 24px;
+    --spacing-xl: 32px;
 }
 
 /* --- 3. BASE STYLES & MOBILE-FIRST LAYOUT --- */
@@ -46,93 +49,217 @@ body {
     font-family: var(--font-primary);
     line-height: 1.6;
     overflow: hidden; 
+    /* Placeholder for future background image, dark space vibe */
+    background: radial-gradient(circle at center, #1a1a2e 0%, var(--color-dark-bg) 100%);
 }
 
 /* --- 4. BEM COMPONENT STYLING --- */
+
+/* AAA Glassmorphism Panel */
+.glass-panel {
+    background-color: var(--color-panel-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    border-radius: 12px;
+}
+
 .main-menu {
     display: flex;
     flex-direction: column;
-    padding: var(--spacing-lg);
-    margin-top: 50px; 
+    align-items: center;
+    padding: var(--spacing-xl);
+    max-width: 500px;
+    margin: 15vh auto;
+    text-align: center;
 }
 
-.main-menu__button {
-    background-color: var(--color-durasteel-rust);
-    color: #ffffff;
-    padding: var(--spacing-md);
-    border: none;
-    border-radius: 4px;
-    margin-bottom: var(--spacing-sm);
-    cursor: pointer;
-    font-family: var(--font-primary);
+.main-menu__header h1 {
+    font-size: 2.5rem;
+    color: var(--color-beskar-silver);
+    text-shadow: var(--glow-secondary);
+    margin-bottom: 5px;
+}
+
+.subtitle {
+    color: var(--color-lust-orange);
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: var(--spacing-lg);
+}
+
+.main-menu__archetype-select {
+    margin-bottom: var(--spacing-lg);
+    text-align: left;
     width: 100%;
 }
 
-.main-menu__button--primary {
-    background-color: var(--color-honor-red);
-    font-weight: bold;
+.main-menu__archetype-select label {
+    display: block;
+    margin-bottom: var(--spacing-sm);
+    color: var(--color-gold);
 }
 
-/* Modals and Popups */
+.main-menu__archetype-select select {
+    width: 100%;
+    padding: 10px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    border: 1px solid var(--color-durasteel-rust);
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+.main-menu__actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    width: 100%;
+}
+
+.main-menu__button {
+    background-color: rgba(139, 90, 43, 0.8);
+    color: #ffffff;
+    padding: 12px var(--spacing-lg);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: var(--font-primary);
+    font-size: 1rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.main-menu__button:hover {
+    background-color: var(--color-durasteel-rust);
+    box-shadow: 0 0 15px var(--color-durasteel-rust);
+    transform: translateY(-2px);
+}
+
+.main-menu__button--primary {
+    background-color: rgba(139, 0, 0, 0.8);
+}
+
+.main-menu__button--primary:hover {
+    background-color: var(--color-honor-red);
+    box-shadow: var(--glow-primary);
+}
+
+.main-menu__button--danger {
+    background-color: transparent;
+    border: 1px solid var(--color-honor-red);
+    color: var(--color-honor-red);
+}
+
+.main-menu__button--danger:hover {
+    background-color: var(--color-honor-red);
+    color: #fff;
+    box-shadow: var(--glow-primary);
+}
+
+/* Modals */
 .modal-panel {
-    background-color: var(--color-panel-bg);
     color: var(--color-beskar-silver);
-    border: 2px solid var(--color-reliability-blue);
-    border-radius: 8px;
     padding: var(--spacing-lg);
-    max-width: 400px;
+    max-width: 450px;
     margin: 10vh auto;
 }
 
 .modal-panel--large {
-    max-width: 600px;
+    max-width: 650px;
     max-height: 80vh;
     overflow-y: auto;
 }
 
 dialog::backdrop {
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.85);
 }
 
-.settings-group {
-    margin-bottom: var(--spacing-md);
+.threat-log-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-bottom: var(--spacing-md);
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--color-beskar-silver);
+    font-size: 2rem;
+    cursor: pointer;
+}
+
+.close-btn:hover {
+    color: var(--color-honor-red);
+}
+
+.threat-scaling-info {
+    background: rgba(255, 215, 0, 0.1);
+    border-left: 4px solid var(--color-gold);
+    padding: 10px;
+    font-size: 0.9rem;
+    margin-bottom: var(--spacing-lg);
 }
 
 .threat-list {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-md);
-    margin-bottom: var(--spacing-md);
 }
 
+/* AAA Threat Card Layout */
 .threat-card {
-    background-color: var(--color-dark-bg);
-    border: 1px solid var(--color-durasteel-rust);
-    padding: var(--spacing-sm);
-    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-md);
+    transition: transform 0.2s ease;
+}
+
+.threat-card:hover {
+    transform: translateX(5px);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.threat-card__visual {
+    flex: 0 0 80px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-right: var(--spacing-md);
+}
+
+.threat-card__info {
+    flex: 1;
 }
 
 .threat-card h4 {
     color: var(--color-gold);
     margin-bottom: 4px;
-    text-transform: capitalize;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
-/* --- 5. RESPONSIVE MEDIA QUERIES --- */
-@media screen and (min-width: 768px) {
-    .main-menu {
-        flex-direction: row;
-        justify-content: space-between;
-    }
-    
-    .main-menu__button {
-        margin-bottom: 0;
-        margin-right: var(--spacing-sm);
-        width: auto;
-    }
+.threat-card p {
+    font-size: 0.9rem;
+    margin-bottom: 2px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: #fff;
+    margin-left: 8px;
 }
 
 /* --- 6. UTILITIES LAYER (Header/Nav) --- */
@@ -141,7 +268,7 @@ header {
     top: 0;
     left: 0;
     width: 100%;
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: var(--spacing-md);
     z-index: 100;
     pointer-events: none; 
 }
@@ -152,15 +279,20 @@ nav {
 }
 
 nav button {
-    background-color: var(--color-durasteel-rust);
+    background-color: rgba(139, 90, 43, 0.8);
     color: #ffffff;
-    border: 1px solid var(--color-beskar-silver);
+    border: 1px solid transparent;
     padding: var(--spacing-sm) var(--spacing-md);
-    border-radius: 4px;
+    border-radius: 6px;
     font-family: var(--font-primary);
-    font-size: 0.9rem;
+    font-weight: bold;
     cursor: pointer;
     pointer-events: auto; 
+    transition: all 0.2s;
+}
+
+nav button:hover {
+    background-color: var(--color-durasteel-rust);
 }
 
 #dropdown-about {
