@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * File: game.js (Part 1)
+ * File: game.js (Part 1 of 2)
  * Project: Project_Verdika
  * Description: Core logic loop, object rendering, and player/particle models.
  * Architecture Rules:
@@ -15,6 +15,7 @@
 window.VerdikaGame = (function() {
     let canvas, ctx;
     
+    // Core game state tracking
     let gameState = {
         isRunning: false,
         wave: 1,
@@ -44,6 +45,7 @@ window.VerdikaGame = (function() {
         'beskar_smith': { baseHp: 100, baseArmor: 0, speed: 4, scrapCostMod: 1.0 }
     };
 
+    // Input state management for drag-to-move mechanics
     const inputState = { 
         isDragging: false, 
         dragStartX: 0, 
@@ -64,7 +66,7 @@ window.VerdikaGame = (function() {
         canvas.addEventListener('mouseup', handlePointerUp);
         canvas.addEventListener('mouseleave', handlePointerUp);
 
-        // Global touchlock to prevent DuckDuckGo / Chrome pull-down scroll
+        // Global touchlock to prevent mobile browser pull-down scroll
         window.addEventListener('touchmove', (e) => {
             if (gameState.isRunning) {
                 e.preventDefault();
@@ -160,6 +162,7 @@ window.VerdikaGame = (function() {
             this.x += this.vx;
             this.y += this.vy;
 
+            // Deactivate if out of bounds
             if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
                 this.active = false;
             }
@@ -192,6 +195,7 @@ window.VerdikaGame = (function() {
         }
 
         update() {
+            // Drop drag state if stale
             if (inputState.isDragging && Date.now() - inputState.lastInteractionTime > 500) {
                  inputState.isDragging = false;
             }
@@ -210,9 +214,11 @@ window.VerdikaGame = (function() {
                 }
             }
             
+            // Keep player within canvas bounds
             this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
             this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
 
+            // Auto-fire logic
             if (Date.now() - this.lastShotTime > this.fireRate && ACTIVE_ENTITIES.enemies.length > 0) {
                 this.shootNearest();
             }
@@ -243,15 +249,20 @@ window.VerdikaGame = (function() {
             ctx.fill();
             ctx.closePath();
 
+            // Render Player Health Bar
             ctx.fillStyle = 'red';
             ctx.fillRect(this.x - 15, this.y - 24, 30, 4);
             ctx.fillStyle = 'green';
             ctx.fillRect(this.x - 15, this.y - 24, 30 * Math.max(0, (this.hp / this.maxHp)), 4);
-     class Enemy {
+        }
+    }
+
+    class Enemy {
         constructor(typeKey, startX, startY, currentWave, indexId) {
             const stats = ENEMY_DICTIONARY[typeKey] || ENEMY_DICTIONARY['acolyte'];
             this.type = typeKey;
             
+            // Health Scaling: 10% per wave cumulatively
             const healthScale = Math.pow(1.10, currentWave - 1);
             this.hp = Math.floor(stats.hp * healthScale);
             this.maxHp = this.hp;
@@ -680,9 +691,8 @@ window.VerdikaGame = (function() {
     };
 })();
 
+// Ensures the module is correctly attached to the window on load
 document.addEventListener('DOMContentLoaded', () => {
     window.VerdikaGame.init();
 });
-                            }
-    }
-    
+                
