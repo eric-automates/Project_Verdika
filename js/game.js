@@ -4,12 +4,14 @@
  * Project: Project_Verdika
  * Description: Core logic loop, object rendering, and combat resolution.
  * Architecture Rules:
- *   - Zero-Dependency: Uses requestAnimationFrame for native 60FPS looping.
- *   - OpSec/Privacy: Resilient against strict-browser storage blocking.
- *   - Modularity: Wraps all logic in an IIFE to prevent global namespace pollution.
+ *   - Zero-Dependency: Uses requestAnimationFrame for native 60FPS looping[span_5](start_span)[span_5](end_span).
+ *   - OpSec/Privacy: Resilient against strict-browser storage blocking. No external 
+ *     calls made; 100% offline capable[span_6](start_span)[span_6](end_span)[span_7](start_span)[span_7](end_span).
+ *   - Modularity: Wraps all logic in an IIFE to prevent global namespace pollution[span_8](start_span)[span_8](end_span).
  * Mandatory Update Points:
- *   - Any new enemy archetypes or boss signets MUST be added to the ENEMY_DICTIONARY.
- *   - Balance adjustments or new classes must be appended to ARCHETYPES.
+ *   - Any new enemy archetypes MUST be added to the ENEMY_DICTIONARY.
+ *   - Any new visual effects must be managed through the Particle class to ensure 
+ *     proper memory garbage collection.
  * =============================================================================
  */
 
@@ -30,6 +32,7 @@ const VerdikaGame = (function() {
         'mudhorn': { hp: 500, speed: 3.5, color: '#8b5a2b', type: 'boss', radius: 40, damage: 25, signetDrop: 'mudhorn_horn' }
     };
 
+    // Tracks all active memory objects for the frame loop
     const ACTIVE_ENTITIES = {
         player: null,
         enemies: [],
@@ -58,13 +61,11 @@ const VerdikaGame = (function() {
     };
 
     function initInput() {
-        // Touch events
         canvas.addEventListener('touchstart', handlePointerDown);
         canvas.addEventListener('touchmove', handlePointerMove);
         canvas.addEventListener('touchend', handlePointerUp);
         canvas.addEventListener('touchcancel', handlePointerUp);
         
-        // Mouse events (for desktop testing)
         canvas.addEventListener('mousedown', handlePointerDown);
         canvas.addEventListener('mousemove', handlePointerMove);
         canvas.addEventListener('mouseup', handlePointerUp);
@@ -114,6 +115,34 @@ const VerdikaGame = (function() {
         };
     }
 
+    /**
+     * Visual effect class for transient events (e.g., spawning, dying).
+     * Managed by an opacity decay to ensure smooth fading and automatic memory garbage collection.
+     */
+    class Particle {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.radius = Math.random() * 8 + 6; 
+            this.life = 1.0; 
+            this.decay = Math.random() * 0.02 + 0.015; // Controls how fast the cloud dissipates
+            this.color = `rgba(169, 169, 169, `; // Base gray color; alpha appended in render
+        }
+
+        update() {
+            this.life -= this.decay;
+            this.radius += 0.3; // Creates an expanding smoke effect
+        }
+
+        render() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = this.color + `${this.life})`;
+            ctx.fill();
+            ctx.closePath();
+        }
+    }
+
     class Projectile {
         constructor(x, y, targetX, targetY, speed, damage) {
             this.x = x;
@@ -121,7 +150,7 @@ const VerdikaGame = (function() {
             this.speed = speed;
             this.damage = damage;
             this.radius = 3;
-            this.color = '#ffd700'; // Gold
+            this.color = '#ffd700'; 
             this.active = true;
 
             const dx = targetX - x;
@@ -135,7 +164,6 @@ const VerdikaGame = (function() {
             this.x += this.vx;
             this.y += this.vy;
 
-            // Deactivate if off-screen
             if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
                 this.active = false;
             }
@@ -156,19 +184,18 @@ const VerdikaGame = (function() {
             this.hp = stats.baseHp;
             this.maxHp = stats.baseHp;
             this.armor = stats.baseArmor;
-            this.maxSpeed = stats.speed; // Maximum allowed speed
+            this.maxSpeed = stats.speed; 
             
             this.x = canvas.width / 2;
             this.y = canvas.height / 2;
             this.radius = 15; 
-            this.color = '#c0c0c0'; // Beskar Silver
+            this.color = '#c0c0c0'; 
 
             this.lastShotTime = 0;
-            this.fireRate = 500; // milliseconds between shots
+            this.fireRate = 500; 
         }
 
         update() {
-            // Idle timeout check (stop moving if no interaction for 500ms)
             if (inputState.isDragging && Date.now() - inputState.lastInteractionTime > 500) {
                  inputState.isDragging = false;
             }
@@ -178,8 +205,7 @@ const VerdikaGame = (function() {
                 const dy = inputState.currentY - inputState.dragStartY;
                 const distance = Math.hypot(dx, dy);
 
-                if (distance > 5) { // Deadzone to prevent jitter
-                    // Scale speed based on drag distance, capped at maxSpeed
+                if (distance > 5) { 
                     const speedMultiplier = Math.min(distance / 100, 1);
                     const currentSpeed = this.maxSpeed * speedMultiplier;
 
@@ -191,7 +217,6 @@ const VerdikaGame = (function() {
             this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
             this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
 
-            // Auto-fire at nearest enemy
             if (Date.now() - this.lastShotTime > this.fireRate && ACTIVE_ENTITIES.enemies.length > 0) {
                 this.shootNearest();
             }
@@ -210,7 +235,6 @@ const VerdikaGame = (function() {
             });
 
             if (nearestEnemy) {
-                // Shoot projectile
                 ACTIVE_ENTITIES.projectiles.push(new Projectile(this.x, this.y, nearestEnemy.x, nearestEnemy.y, 8, 10));
                 this.lastShotTime = Date.now();
             }
@@ -223,7 +247,6 @@ const VerdikaGame = (function() {
             ctx.fill();
             ctx.closePath();
 
-            // Health bar
             ctx.fillStyle = 'red';
             ctx.fillRect(this.x - 15, this.y - 25, 30, 5);
             ctx.fillStyle = 'green';
@@ -236,12 +259,11 @@ const VerdikaGame = (function() {
             const stats = ENEMY_DICTIONARY[typeKey] || ENEMY_DICTIONARY['acolyte'];
             this.type = typeKey;
             
-            // Health scales exponentially with wave number, speed remains capped
             const healthScale = Math.pow(1.1, currentWave - 1);
             this.hp = Math.floor(stats.hp * healthScale);
             this.maxHp = this.hp;
             
-            this.speed = stats.speed; // Speed remains static to prevent undodgeable enemies
+            this.speed = stats.speed; 
             this.radius = stats.radius;
             this.damage = stats.damage;
             this.color = stats.color;
@@ -270,7 +292,6 @@ const VerdikaGame = (function() {
             ctx.fill();
             ctx.closePath();
             
-            // Enemy health bar
             ctx.fillStyle = 'red';
             ctx.fillRect(this.x - 10, this.y - 20, 20, 3);
             ctx.fillStyle = 'green';
@@ -278,8 +299,11 @@ const VerdikaGame = (function() {
         }
     }
 
+    /**
+     * Forces enemies to strictly spawn along the absolute 0 or max parameters of the canvas.
+     * Accompanied by Particle clouds to signal entry.
+     */
     function spawnWave(waveNumber) {
-        // Density increases linearly per wave
         const enemyCount = waveNumber * 5;
         const enemyTypes = Object.keys(ENEMY_DICTIONARY).filter(type => type !== 'mudhorn');
 
@@ -287,15 +311,34 @@ const VerdikaGame = (function() {
             const randomType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
             
             let spawnX, spawnY;
-            if (Math.random() < 0.5) {
-                spawnX = Math.random() < 0.5 ? -30 : canvas.width + 30;
-                spawnY = Math.random() * canvas.height;
-            } else {
+            
+            // Randomly select one of the 4 screen edges (0: Top, 1: Right, 2: Bottom, 3: Left)
+            const edge = Math.floor(Math.random() * 4);
+            
+            if (edge === 0) {
                 spawnX = Math.random() * canvas.width;
-                spawnY = Math.random() < 0.5 ? -30 : canvas.height + 30;
+                spawnY = 0;
+            } else if (edge === 1) {
+                spawnX = canvas.width;
+                spawnY = Math.random() * canvas.height;
+            } else if (edge === 2) {
+                spawnX = Math.random() * canvas.width;
+                spawnY = canvas.height;
+            } else {
+                spawnX = 0;
+                spawnY = Math.random() * canvas.height;
             }
 
             ACTIVE_ENTITIES.enemies.push(new Enemy(randomType, spawnX, spawnY, waveNumber));
+
+            // Generate spawn smoke cloud (Particles)
+            for (let p = 0; p < 6; p++) {
+                // Apply slight random offset so the cloud looks organic around the spawn point
+                ACTIVE_ENTITIES.particles.push(new Particle(
+                    spawnX + (Math.random() * 10 - 5), 
+                    spawnY + (Math.random() * 10 - 5)
+                ));
+            }
         }
     }
 
@@ -308,15 +351,40 @@ const VerdikaGame = (function() {
                 const dist = Math.hypot(p.x - e.x, p.y - e.y);
                 
                 if (dist < p.radius + e.radius) {
-                    // Hit!
                     e.hp -= p.damage;
                     p.active = false;
                     
                     if (e.hp <= 0) {
                         e.active = false;
-                        gameState.beskarScrap += 10; // Reward
+                        gameState.beskarScrap += 10; 
                     }
-                    break; // Projectile destroyed, stop checking other enemies
+                    break; 
+                }
+            }
+        }
+
+        // Enemy vs Enemy (Solid Objects)
+        // Uses a spatial separation vector to push overlapping enemies apart.
+        for (let i = 0; i < ACTIVE_ENTITIES.enemies.length; i++) {
+            for (let j = i + 1; j < ACTIVE_ENTITIES.enemies.length; j++) {
+                const e1 = ACTIVE_ENTITIES.enemies[i];
+                const e2 = ACTIVE_ENTITIES.enemies[j];
+                
+                const dx = e2.x - e1.x;
+                const dy = e2.y - e1.y;
+                const distance = Math.hypot(dx, dy);
+                const minDistance = e1.radius + e2.radius;
+
+                if (distance < minDistance && distance > 0) {
+                    const overlap = minDistance - distance;
+                    const nx = dx / distance;
+                    const ny = dy / distance;
+                    
+                    // Displace each enemy by half the overlap distance to prevent sticking
+                    e1.x -= nx * (overlap / 2);
+                    e1.y -= ny * (overlap / 2);
+                    e2.x += nx * (overlap / 2);
+                    e2.y += ny * (overlap / 2);
                 }
             }
         }
@@ -325,14 +393,25 @@ const VerdikaGame = (function() {
         ACTIVE_ENTITIES.projectiles = ACTIVE_ENTITIES.projectiles.filter(p => p.active);
         ACTIVE_ENTITIES.enemies = ACTIVE_ENTITIES.enemies.filter(e => e.active);
 
-        // Enemies vs Player
+        // Enemies vs Player (Hit and Run / Bounce)
         if (ACTIVE_ENTITIES.player) {
             const p = ACTIVE_ENTITIES.player;
             ACTIVE_ENTITIES.enemies.forEach(e => {
-                const dist = Math.hypot(p.x - e.x, p.y - e.y);
-                if (dist < p.radius + e.radius) {
-                    // Simple collision damage logic
-                    p.hp -= e.damage * 0.05; // Arbitrary tick damage
+                const dx = p.x - e.x;
+                const dy = p.y - e.y;
+                const distance = Math.hypot(dx, dy);
+                const minDistance = p.radius + e.radius;
+
+                if (distance < minDistance) {
+                    p.hp -= e.damage * 0.05; 
+
+                    // Bounce Logic: Pushes the enemy backward so they do not rest inside the player coordinate space.
+                    const nx = dx / distance;
+                    const ny = dy / distance;
+                    const pushBackStr = e.speed * 8; // Force of the bounce
+
+                    e.x -= nx * pushBackStr;
+                    e.y -= ny * pushBackStr;
 
                     if (p.hp <= 0) {
                         handleGameOver();
@@ -344,7 +423,7 @@ const VerdikaGame = (function() {
 
     function handleGameOver() {
         gameState.isRunning = false;
-        document.getElementById('btn-pause').style.display = 'none'; // Hide in-game menu
+        document.getElementById('btn-pause').style.display = 'none'; 
         document.getElementById('game-over').style.display = 'flex';
         document.getElementById('game-over-stats').innerText = `You reached Wave ${gameState.wave} and collected ${gameState.beskarScrap} Beskar Scrap.`;
         saveProgress();
@@ -354,6 +433,7 @@ const VerdikaGame = (function() {
         ACTIVE_ENTITIES.player = null;
         ACTIVE_ENTITIES.enemies = [];
         ACTIVE_ENTITIES.projectiles = [];
+        ACTIVE_ENTITIES.particles = [];
         gameState.wave = 1;
         gameState.beskarScrap = 0;
         inputState.isDragging = false;
@@ -378,10 +458,13 @@ const VerdikaGame = (function() {
         });
 
         ACTIVE_ENTITIES.projectiles.forEach(p => p.update());
+        
+        // Update particles and clear out dead ones
+        ACTIVE_ENTITIES.particles.forEach(p => p.update());
+        ACTIVE_ENTITIES.particles = ACTIVE_ENTITIES.particles.filter(p => p.life > 0);
 
         checkCollisions();
 
-        // Wave Progression Check
         if (ACTIVE_ENTITIES.enemies.length === 0 && ACTIVE_ENTITIES.player && gameState.isRunning) {
             gameState.wave++;
             saveProgress(); 
@@ -392,7 +475,6 @@ const VerdikaGame = (function() {
     function renderCanvas() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Push HUD down slightly so it isn't blocked by the new absolutely positioned header
         ctx.fillStyle = '#fff';
         ctx.font = '16px sans-serif';
         ctx.fillText(`Wave: ${gameState.wave}`, 10, 60);
@@ -407,10 +489,12 @@ const VerdikaGame = (function() {
         });
 
         ACTIVE_ENTITIES.projectiles.forEach(p => p.render());
+        
+        // Render ephemeral elements last so they draw over entities cleanly
+        ACTIVE_ENTITIES.particles.forEach(p => p.render());
     }
 
     function saveProgress() {
-        // OpSec/Privacy: Wrapped in try-catch to prevent fatal game crashes if LocalStorage is blocked by strict browsers
         try {
             localStorage.setItem('verdika_save_state', JSON.stringify(gameState));
         } catch (e) {
@@ -435,7 +519,7 @@ const VerdikaGame = (function() {
 
             document.getElementById('btn-start').addEventListener('click', () => {
                 document.getElementById('main-menu').style.display = 'none';
-                document.getElementById('btn-pause').style.display = 'inline-block'; // Reveal in-game menu
+                document.getElementById('btn-pause').style.display = 'inline-block'; 
                 
                 const selectedArchetype = document.getElementById('archetype-picker').value;
                 ACTIVE_ENTITIES.player = new Player(selectedArchetype);
@@ -449,20 +533,19 @@ const VerdikaGame = (function() {
             document.getElementById('btn-restart').addEventListener('click', () => {
                 document.getElementById('game-over').style.display = 'none';
                 document.getElementById('main-menu').style.display = 'flex';
-                document.getElementById('btn-pause').style.display = 'none'; // Hide in-game menu
+                document.getElementById('btn-pause').style.display = 'none'; 
                 resetGame();
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
             });
 
-            // --- CUSTOM EVENT LISTENERS ---
             window.addEventListener('verdikaPauseGame', () => {
-                gameState.isRunning = false; // Halts the requestAnimationFrame loop
+                gameState.isRunning = false; 
             });
 
             window.addEventListener('verdikaResumeGame', () => {
                 if (!gameState.isRunning) {
                     gameState.isRunning = true;
-                    inputState.lastInteractionTime = Date.now(); // Prevents instant idle timeout on resume
+                    inputState.lastInteractionTime = Date.now(); 
                     requestAnimationFrame(gameLoop);
                 }
             });
@@ -474,7 +557,7 @@ const VerdikaGame = (function() {
                 
                 document.getElementById('main-menu').style.display = 'flex';
                 document.getElementById('game-over').style.display = 'none';
-                document.getElementById('btn-pause').style.display = 'none'; // Hide in-game menu
+                document.getElementById('btn-pause').style.display = 'none'; 
                 
                 resetGame();
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -486,4 +569,3 @@ const VerdikaGame = (function() {
 document.addEventListener('DOMContentLoaded', () => {
     VerdikaGame.init();
 });
-                        
