@@ -24,9 +24,12 @@ window.VerdikaGame = (function() {
     };
 
     // Centralized Data Dictionary: Shared with Utilities (Threat Log)
+    // Added Strill (Wolf/Hound) and Clansman archetypes with unique behaviors.
     const ENEMY_DICTIONARY = {
-        'acolyte': { hp: 20, speed: 1.5, color: '#4682b4', type: 'horde', radius: 12, damage: 5, pros: 'Swarm tactics', cons: 'Low individual health', behavior: 'Direct pursuit after observing' },
-        'krayt': { hp: 10, speed: 2.8, color: '#228b22', type: 'swarm', radius: 8, damage: 2, pros: 'Extremely fast', cons: 'Fragile', behavior: 'Erratic movement, hit and run' },
+        'acolyte': { hp: 20, speed: 1.5, color: '#4682b4', type: 'horde', radius: 12, damage: 5, pros: 'Swarm tactics', cons: 'Low individual health', behavior: 'Erratic forward pursuit' },
+        'strill': { hp: 30, speed: 2.5, color: '#8b4513', type: 'hound', radius: 10, damage: 8, pros: 'Fast, pack hunter', cons: 'Hesitates at range', behavior: 'Circles the edge, dives when close' },
+        'krayt': { hp: 10, speed: 2.8, color: '#228b22', type: 'swarm', radius: 8, damage: 2, pros: 'Extremely fast', cons: 'Fragile', behavior: 'Erratic weaving, hit and run' },
+        'clansman': { hp: 80, speed: 1.8, color: '#4b0082', type: 'warrior', radius: 15, damage: 15, pros: 'Tactical pairing', cons: 'Retreats if isolated', behavior: 'Seeks backup, attacks in pairs' },
         'mercenary': { hp: 50, speed: 0.9, color: '#696969', type: 'heavy', radius: 18, damage: 10, pros: 'High armor & damage', cons: 'Slow movement', behavior: 'Roman Phalanx rigid grid formation' },
         'mudhorn': { hp: 500, speed: 1.2, color: '#8b5a2b', type: 'boss', radius: 35, damage: 25, signetDrop: 'mudhorn_horn', pros: 'Devastating charge', cons: 'Large turning radius', behavior: 'Relentless aggression' }
     };
@@ -45,7 +48,6 @@ window.VerdikaGame = (function() {
         'beskar_smith': { baseHp: 100, baseArmor: 0, speed: 4, scrapCostMod: 1.0 }
     };
 
-    // Input state management for drag-to-move mechanics
     const inputState = { 
         isDragging: false, 
         dragStartX: 0, 
@@ -66,7 +68,6 @@ window.VerdikaGame = (function() {
         canvas.addEventListener('mouseup', handlePointerUp);
         canvas.addEventListener('mouseleave', handlePointerUp);
 
-        // Global touchlock to prevent mobile browser pull-down scroll
         window.addEventListener('touchmove', (e) => {
             if (gameState.isRunning) {
                 e.preventDefault();
@@ -162,7 +163,6 @@ window.VerdikaGame = (function() {
             this.x += this.vx;
             this.y += this.vy;
 
-            // Deactivate if out of bounds
             if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
                 this.active = false;
             }
@@ -195,7 +195,6 @@ window.VerdikaGame = (function() {
         }
 
         update() {
-            // Drop drag state if stale
             if (inputState.isDragging && Date.now() - inputState.lastInteractionTime > 500) {
                  inputState.isDragging = false;
             }
@@ -214,11 +213,9 @@ window.VerdikaGame = (function() {
                 }
             }
             
-            // Keep player within canvas bounds
             this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
             this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
 
-            // Auto-fire logic
             if (Date.now() - this.lastShotTime > this.fireRate && ACTIVE_ENTITIES.enemies.length > 0) {
                 this.shootNearest();
             }
@@ -249,20 +246,18 @@ window.VerdikaGame = (function() {
             ctx.fill();
             ctx.closePath();
 
-            // Render Player Health Bar
+            // Re-attached closing braces to fix rendering scope error
             ctx.fillStyle = 'red';
             ctx.fillRect(this.x - 15, this.y - 24, 30, 4);
             ctx.fillStyle = 'green';
             ctx.fillRect(this.x - 15, this.y - 24, 30 * Math.max(0, (this.hp / this.maxHp)), 4);
         }
-    }
-
-    class Enemy {
+        }
+        class Enemy {
         constructor(typeKey, startX, startY, currentWave, indexId) {
             const stats = ENEMY_DICTIONARY[typeKey] || ENEMY_DICTIONARY['acolyte'];
             this.type = typeKey;
             
-            // Health Scaling: 10% per wave cumulatively
             const healthScale = Math.pow(1.10, currentWave - 1);
             this.hp = Math.floor(stats.hp * healthScale);
             this.maxHp = this.hp;
@@ -276,19 +271,15 @@ window.VerdikaGame = (function() {
             this.y = startY;
             this.active = true;
 
-            // AI Behavior Engine States
             this.state = 'observing'; 
             this.stateTimer = Math.floor(Math.random() * 40) + 20;
             this.angle = Math.atan2(canvas.height/2 - startY, canvas.width/2 - startX); 
             
-            // Phalanx formation offset relative to wave index
             this.formationOffsetX = (indexId % 4) * 45 - 60;
             this.formationOffsetY = Math.floor(indexId / 4) * 45 - 60;
 
-            // Boss charge tracking
-            this.chargeTargetX = 0;
-            this.chargeTargetY = 0;
             this.ticks = Math.floor(Math.random() * 100);
+            this.randomSeed = Math.random() * Math.PI * 2; 
         }
 
         update(player) {
@@ -300,31 +291,69 @@ window.VerdikaGame = (function() {
             const distanceToPlayer = Math.hypot(dx, dy);
             const directAngleToPlayer = Math.atan2(dy, dx);
 
+            // GLOBAL: Erratic wander generation (Simulates organic "imperfect" movement)
+            const wanderAngle = Math.sin(this.ticks * 0.05 + this.randomSeed) * 0.4;
+            let targetAngle = directAngleToPlayer + wanderAngle;
+
             // --- ARCHETYPE-SPECIFIC AI BEHAVIORS ---
-            if (this.type === 'acolyte') {
-                // ACOLYTE (Horde): Staggered pulse pursuit
+            if (this.type === 'strill') {
+                // STRILL (Wolf/Hound): Circles the perimeter, dives when player gets too close
+                this.state = 'moving';
+                if (distanceToPlayer > 180) {
+                    // Circle around by adding 90 degrees to direct angle
+                    targetAngle = directAngleToPlayer + (Math.PI / 2) + wanderAngle;
+                    this.speed = this.baseSpeed * 1.2;
+                } else {
+                    // Dive bomb straight in
+                    targetAngle = directAngleToPlayer;
+                    this.speed = this.baseSpeed * 1.8;
+                }
+                this.angle = targetAngle;
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+            }
+            else if (this.type === 'clansman') {
+                // CLANSMAN: Fights in pairs. Runs to the edge if no backup is found.
+                let hasBackup = ACTIVE_ENTITIES.enemies.some(e => e !== this && e.type === 'clansman' && Math.hypot(e.x - this.x, e.y - this.y) < 250);
+                
+                if (!hasBackup) {
+                    this.state = 'fleeing';
+                    // Run away from player, slight jitter
+                    targetAngle = directAngleToPlayer + Math.PI + wanderAngle;
+                    this.speed = this.baseSpeed * 1.5; 
+                } else {
+                    this.state = 'moving';
+                    this.speed = this.baseSpeed;
+                }
+                
+                this.angle = targetAngle;
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+            }
+            else if (this.type === 'acolyte') {
+                // ACOLYTE: Staggered pulse pursuit + wandering
                 if (this.state === 'observing') {
-                    this.angle = directAngleToPlayer;
+                    this.angle = targetAngle;
                     this.stateTimer--;
                     if (this.stateTimer <= 0) {
                         this.state = 'moving';
-                        this.stateTimer = 90; // Move for ~1.5s
+                        this.stateTimer = 90; 
                     }
                 } else if (this.state === 'moving') {
-                    this.angle = directAngleToPlayer;
+                    this.angle = targetAngle;
                     this.x += Math.cos(this.angle) * this.speed;
                     this.y += Math.sin(this.angle) * this.speed;
                     this.stateTimer--;
                     if (this.stateTimer <= 0) {
                         this.state = 'observing';
-                        this.stateTimer = 25; // Brief re-lock pause
+                        this.stateTimer = 25; 
                     }
                 }
             } 
             else if (this.type === 'krayt') {
-                // KRAYT (Swarm): High-speed erratic weave & rapid hit-and-run
+                // KRAYT: High-speed erratic weave
                 if (this.state === 'fleeing') {
-                    this.angle = directAngleToPlayer + Math.PI; // Face away
+                    this.angle = directAngleToPlayer + Math.PI; 
                     this.x += Math.cos(this.angle) * (this.speed * 1.4);
                     this.y += Math.sin(this.angle) * (this.speed * 1.4);
                     this.stateTimer--;
@@ -333,32 +362,29 @@ window.VerdikaGame = (function() {
                     }
                 } else {
                     this.state = 'moving';
-                    // Weave trajectory using sine wave offset
-                    const weaveAngle = directAngleToPlayer + Math.sin(this.ticks * 0.15) * 0.8;
+                    const weaveAngle = directAngleToPlayer + Math.sin(this.ticks * 0.15) * 1.2;
                     this.angle = weaveAngle;
                     this.x += Math.cos(this.angle) * this.speed;
                     this.y += Math.sin(this.angle) * this.speed;
                 }
             } 
             else if (this.type === 'mercenary') {
-                // MERCENARY (Heavy): Roman Phalanx locked march
+                // MERCENARY: Roman Phalanx locked march
                 this.state = 'moving';
-                // Target a grid position marching relentlessly in line relative to player
                 const marchTargetX = player.x + this.formationOffsetX;
                 const marchTargetY = player.y + this.formationOffsetY;
                 const angleToFormation = Math.atan2(marchTargetY - this.y, marchTargetX - this.x);
                 
-                this.angle = directAngleToPlayer; // Keep facing player
+                this.angle = directAngleToPlayer; 
                 this.x += Math.cos(angleToFormation) * this.speed;
                 this.y += Math.sin(angleToFormation) * this.speed;
             } 
             else if (this.type === 'mudhorn') {
-                // MUDHORN (Boss): Large turning radius & high-speed CHARGE
+                // MUDHORN: Large turning radius & high-speed CHARGE
                 if (this.state === 'charging') {
-                    this.x += Math.cos(this.angle) * 6.5; // High speed charge
+                    this.x += Math.cos(this.angle) * 6.5; 
                     this.y += Math.sin(this.angle) * 6.5;
                     
-                    // Smoke trail particles
                     if (this.ticks % 2 === 0) {
                         ACTIVE_ENTITIES.particles.push(new Particle(this.x, this.y, 'rgba(139, 90, 43, '));
                     }
@@ -366,7 +392,7 @@ window.VerdikaGame = (function() {
                     this.stateTimer--;
                     if (this.stateTimer <= 0 || this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
                         this.state = 'exhausted';
-                        this.stateTimer = 50; // Pause after charge
+                        this.stateTimer = 50; 
                     }
                 } else if (this.state === 'exhausted') {
                     this.stateTimer--;
@@ -374,21 +400,19 @@ window.VerdikaGame = (function() {
                         this.state = 'observing';
                     }
                 } else {
-                    // Turn slowly toward player
                     let diff = directAngleToPlayer - this.angle;
                     while (diff < -Math.PI) diff += Math.PI * 2;
                     while (diff > Math.PI) diff -= Math.PI * 2;
                     
-                    const maxTurn = 0.035; // Turning radius constraint
+                    const maxTurn = 0.035; 
                     this.angle += Math.max(-maxTurn, Math.min(maxTurn, diff));
 
                     this.x += Math.cos(this.angle) * this.speed;
                     this.y += Math.sin(this.angle) * this.speed;
 
-                    // Trigger Charge if lined up with player
                     if (Math.abs(diff) < 0.2 && distanceToPlayer < 350 && distanceToPlayer > 80) {
                         this.state = 'charging';
-                        this.stateTimer = 45; // Charge duration
+                        this.stateTimer = 45; 
                     }
                 }
             }
@@ -399,7 +423,6 @@ window.VerdikaGame = (function() {
         }
 
         render() {
-            // Draw Facing Indicator / Visor Arc
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.radius + 2, this.angle - Math.PI/4, this.angle + Math.PI/4);
             ctx.lineTo(this.x, this.y);
@@ -407,14 +430,12 @@ window.VerdikaGame = (function() {
             ctx.fill();
             ctx.closePath();
 
-            // Draw Core Body
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
             ctx.fillStyle = this.color;
             ctx.fill();
             ctx.closePath();
             
-            // Health Bar
             ctx.fillStyle = 'red';
             ctx.fillRect(this.x - 12, this.y - (this.radius + 8), 24, 3);
             ctx.fillStyle = 'green';
@@ -427,7 +448,6 @@ window.VerdikaGame = (function() {
         const enemyTypes = Object.keys(ENEMY_DICTIONARY);
 
         for (let i = 0; i < enemyCount; i++) {
-            // Boss spawns every 5 waves
             let typeKey = enemyTypes[Math.floor(Math.random() * (enemyTypes.length - 1))];
             if (waveNumber % 5 === 0 && i === 0) {
                 typeKey = 'mudhorn';
@@ -445,7 +465,6 @@ window.VerdikaGame = (function() {
     }
 
     function checkCollisions() {
-        // Projectile vs Enemy
         for (let i = ACTIVE_ENTITIES.projectiles.length - 1; i >= 0; i--) {
             const p = ACTIVE_ENTITIES.projectiles[i];
             for (let j = ACTIVE_ENTITIES.enemies.length - 1; j >= 0; j--) {
@@ -465,7 +484,6 @@ window.VerdikaGame = (function() {
             }
         }
 
-        // Enemy vs Enemy (Separation push)
         for (let i = 0; i < ACTIVE_ENTITIES.enemies.length; i++) {
             for (let j = i + 1; j < ACTIVE_ENTITIES.enemies.length; j++) {
                 const e1 = ACTIVE_ENTITIES.enemies[i];
@@ -492,7 +510,6 @@ window.VerdikaGame = (function() {
         ACTIVE_ENTITIES.projectiles = ACTIVE_ENTITIES.projectiles.filter(p => p.active);
         ACTIVE_ENTITIES.enemies = ACTIVE_ENTITIES.enemies.filter(e => e.active);
 
-        // Player vs Enemy
         if (ACTIVE_ENTITIES.player) {
             const p = ACTIVE_ENTITIES.player;
             ACTIVE_ENTITIES.enemies.forEach(e => {
@@ -691,8 +708,7 @@ window.VerdikaGame = (function() {
     };
 })();
 
-// Ensures the module is correctly attached to the window on load
 document.addEventListener('DOMContentLoaded', () => {
     window.VerdikaGame.init();
 });
-                
+                            
