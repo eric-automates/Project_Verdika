@@ -19,7 +19,7 @@ Mandatory Update Points:
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
-    <meta name="viewport" content="width=device-width, height=device-height">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
     <title>Verd'ika: Resol'nare</title>
     
@@ -54,6 +54,18 @@ Mandatory Update Points:
     <!-- CORE GAME LAYER -->
     <main id="game-container">
         
+        <!-- IN-GAME HUD OVERLAY -->
+        <div id="game-hud" class="game-hud glass-panel" style="display: none;">
+            <div class="hud-stat">
+                <span class="hud-label">WAVE</span>
+                <span id="hud-wave-val" class="hud-value">1</span>
+            </div>
+            <div class="hud-stat">
+                <span class="hud-label">BESKAR</span>
+                <span id="hud-scrap-val" class="hud-value--gold">0</span>
+            </div>
+        </div>
+
         <!-- MAIN MENU -->
         <section id="main-menu" class="main-menu glass-panel">
             <div class="main-menu__header">
