@@ -90,4 +90,27 @@ body {
         margin-bottom: 0;
         margin-right: var(--spacing-sm);
     }
+/* Modals and Popups */
+.modal-panel {
+    background-color: var(--color-dark-bg);
+    color: var(--color-beskar-silver);
+    border: 2px solid var(--color-reliability-blue);
+    border-radius: 8px;
+    padding: var(--spacing-lg);
+    max-width: 400px;
+    margin: 10vh auto;
+}
+
+/* Ensure native dialog backdrop is dark */
+dialog::backdrop {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.settings-group {
+    margin-bottom: var(--spacing-md);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+  
 }
