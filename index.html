@@ -7,7 +7,8 @@ Description: Zero-dependency, offline-first HTML5 foundation for the game.
              Acts as the primary canvas container and utility layer host.
 Architecture Rules:
   - Uses strict HTML5 standards for maximum device compatibility.
-  - Semantic structure separating utilities (<header>/<nav>) from the game (<main>).
+  - Semantic structure separating utilities (<header>/<nav>) from the game (<main>)[span_1](start_span)[span_1](end_span).
+  - No "type" attributes on script or style tags per HTML5 guidelines[span_2](start_span)[span_2](end_span).
 Mandatory Update Points:
   - Any new global CSS variables or stylesheets must be linked in the <head> before scripts.
   - Game canvas size/scaling updates should respect the meta viewport constraints.
@@ -15,6 +16,7 @@ Mandatory Update Points:
 -->
 <html>
 <head>
+    <!-- Character set MUST be the first element in the head for parsing speed[span_3](start_span)[span_3](end_span) -->
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
     <meta name="viewport" content="width=device-width, height=device-height">
@@ -28,13 +30,14 @@ Mandatory Update Points:
 </head>
 <body>
     <!-- MANDATORY UTILITIES LAYER -->
+    <!-- Utilizing semantic tags instead of generic divs for accessibility and structure[span_4](start_span)[span_4](end_span) -->
     <header>
         <nav>
             <button id="btn-help">Help</button>
-            <div id="dropdown-about">
+            <div id="dropdown-about" style="display: none;">
                 <!-- Version, backstory, health gauges render here -->
             </div>
-            <div id="parking-lot">
+            <div id="parking-lot" style="display: none;">
                 <!-- Future features backlog -->
             </div>
         </nav>
@@ -44,10 +47,21 @@ Mandatory Update Points:
     <main id="game-container">
         
         <!-- MAIN MENU -->
-        <section id="main-menu">
+        <section id="main-menu" class="main-menu">
             <h1>Verd'ika: Resol'nare</h1>
-            <button id="btn-start">Start Raid</button>
-            <button id="btn-settings">Settings</button>
+            
+            <div class="main-menu__archetype-select">
+                <label for="archetype-picker">Select Archetype:</label>
+                <select id="archetype-picker">
+                    <option value="foundry_master">Foundry Master (Nau'ur)</option>
+                    <option value="heavy_commando">Heavy Commando (Kandosii)</option>
+                    <option value="death_watch">Death Watch Zealot (Kyr'tsad)</option>
+                    <option value="beskar_smith">Beskar Smith (Goran)</option>
+                </select>
+            </div>
+
+            <button id="btn-start" class="main-menu__button main-menu__button--primary">Start Raid</button>
+            <button id="btn-settings" class="main-menu__button">Settings</button>
         </section>
 
         <!-- GAME CANVAS -->
