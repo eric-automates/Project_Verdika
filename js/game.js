@@ -14,10 +14,8 @@
  */
 
 const VerdikaGame = (function() {
-    // Canvas context handles all visual rendering.
     let canvas, ctx;
     
-    // Core game state holding scrap, wave count, and current signet.
     let gameState = {
         isRunning: false,
         wave: 1,
@@ -25,15 +23,11 @@ const VerdikaGame = (function() {
         activeSignet: null 
     };
 
-    /**
-     * --- ENTITY DICTIONARY ---
-     * Acts as the single source of truth for all game objects.
-     */
     const ENEMY_DICTIONARY = {
-        'acolyte': { hp: 20, speed: 1.5, color: '#4682b4', type: 'horde', radius: 12 },
-        'krayt': { hp: 10, speed: 2.5, color: '#228b22', type: 'swarm', radius: 8 },
-        'mercenary': { hp: 50, speed: 0.8, color: '#696969', type: 'heavy', radius: 18 },
-        'mudhorn': { hp: 500, speed: 3.5, color: '#8b5a2b', type: 'boss', radius: 40, signetDrop: 'mudhorn_horn' }
+        'acolyte': { hp: 20, speed: 1.5, color: '#4682b4', type: 'horde', radius: 12, damage: 5 },
+        'krayt': { hp: 10, speed: 2.5, color: '#228b22', type: 'swarm', radius: 8, damage: 2 },
+        'mercenary': { hp: 50, speed: 0.8, color: '#696969', type: 'heavy', radius: 18, damage: 10 },
+        'mudhorn': { hp: 500, speed: 3.5, color: '#8b5a2b', type: 'boss', radius: 40, damage: 25, signetDrop: 'mudhorn_horn' }
     };
 
     const ACTIVE_ENTITIES = {
@@ -43,10 +37,6 @@ const VerdikaGame = (function() {
         particles: []
     };
 
-    /**
-     * --- PLAYER ARCHETYPES ---
-     * Base stats mapped to the Mando'a classes. 
-     */
     const ARCHETYPES = {
         'foundry_master': { baseHp: 100, baseArmor: 5, speed: 4, scrapCostMod: 0.8 },
         'heavy_commando': { baseHp: 130, baseArmor: 20, speed: 3.2, scrapCostMod: 1.0 },
@@ -55,90 +45,99 @@ const VerdikaGame = (function() {
     };
 
     /**
-     * --- INPUT HANDLER ---
-     * Captures cross-platform interactions. Event listeners are decoupled from the 
-     * game loop to prevent blocking the main thread.
+     * --- INPUT HANDLER (TOUCH / DRAG) ---
+     * Captures drag gestures to move the player. Speed scales with drag distance.
      */
-    const inputState = { up: false, down: false, left: false, right: false };
+    const inputState = { 
+        isDragging: false, 
+        dragStartX: 0, 
+        dragStartY: 0,
+        currentX: 0,
+        currentY: 0,
+        lastInteractionTime: 0
+    };
 
     function initInput() {
-        window.addEventListener('keydown', (e) => handleKey(e.code, true));
-        window.addEventListener('keyup', (e) => handleKey(e.code, false));
-        // Touch controls for mobile/Pixel to be appended here in the future.
+        // Touch events
+        canvas.addEventListener('touchstart', handlePointerDown);
+        canvas.addEventListener('touchmove', handlePointerMove);
+        canvas.addEventListener('touchend', handlePointerUp);
+        canvas.addEventListener('touchcancel', handlePointerUp);
+        
+        // Mouse events (for desktop testing)
+        canvas.addEventListener('mousedown', handlePointerDown);
+        canvas.addEventListener('mousemove', handlePointerMove);
+        canvas.addEventListener('mouseup', handlePointerUp);
+        canvas.addEventListener('mouseleave', handlePointerUp);
     }
 
-    function handleKey(code, isPressed) {
-        if (code === 'ArrowUp' || code === 'KeyW') inputState.up = isPressed;
-        if (code === 'ArrowDown' || code === 'KeyS') inputState.down = isPressed;
-        if (code === 'ArrowLeft' || code === 'KeyA') inputState.left = isPressed;
-        if (code === 'ArrowRight' || code === 'KeyD') inputState.right = isPressed;
+    function handlePointerDown(e) {
+        if (!gameState.isRunning) return;
+        e.preventDefault(); 
+        inputState.isDragging = true;
+        const pos = getPointerPos(e);
+        inputState.dragStartX = pos.x;
+        inputState.dragStartY = pos.y;
+        inputState.currentX = pos.x;
+        inputState.currentY = pos.y;
+        inputState.lastInteractionTime = Date.now();
     }
 
-    /**
-     * --- PLAYER ENTITY CLASS ---
-     * Manages position, health, and rendering of the player.
-     */
-    class Player {
-        constructor(archetypeKey) {
-            const stats = ARCHETYPES[archetypeKey] || ARCHETYPES['foundry_master'];
-            this.hp = stats.baseHp;
-            this.maxHp = stats.baseHp;
-            this.armor = stats.baseArmor;
-            this.speed = stats.speed;
-            
-            this.x = canvas.width / 2;
-            this.y = canvas.height / 2;
-            this.radius = 15; 
-            this.color = '#c0c0c0'; // Beskar Silver
+    function handlePointerMove(e) {
+        if (!inputState.isDragging || !gameState.isRunning) return;
+        e.preventDefault();
+        const pos = getPointerPos(e);
+        inputState.currentX = pos.x;
+        inputState.currentY = pos.y;
+        inputState.lastInteractionTime = Date.now();
+    }
+
+    function handlePointerUp(e) {
+        if (!gameState.isRunning) return;
+        e.preventDefault();
+        inputState.isDragging = false;
+    }
+
+    function getPointerPos(e) {
+        let clientX, clientY;
+        if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: clientX - rect.left,
+            y: clientY - rect.top
+        };
+    }
+
+    class Projectile {
+        constructor(x, y, targetX, targetY, speed, damage) {
+            this.x = x;
+            this.y = y;
+            this.speed = speed;
+            this.damage = damage;
+            this.radius = 3;
+            this.color = '#ffd700'; // Gold
+            this.active = true;
+
+            const dx = targetX - x;
+            const dy = targetY - y;
+            const distance = Math.hypot(dx, dy);
+            this.vx = (dx / distance) * this.speed;
+            this.vy = (dy / distance) * this.speed;
         }
 
         update() {
-            if (inputState.up) this.y -= this.speed;
-            if (inputState.down) this.y += this.speed;
-            if (inputState.left) this.x -= this.speed;
-            if (inputState.right) this.x += this.speed;
-            
-            this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
-            this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
-        }
+            this.x += this.vx;
+            this.y += this.vy;
 
-        render() {
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-            ctx.fillStyle = this.color;
-            ctx.fill();
-            ctx.closePath();
-        }
-    }
-
-    /**
-     * --- ENEMY ENTITY CLASS ---
-     * Inherits stats from the ENEMY_DICTIONARY. Includes logic to track and pursue the player.
-     */
-    class Enemy {
-        constructor(typeKey, startX, startY) {
-            const stats = ENEMY_DICTIONARY[typeKey] || ENEMY_DICTIONARY['acolyte'];
-            this.type = typeKey;
-            this.hp = stats.hp;
-            this.speed = stats.speed;
-            this.radius = stats.radius;
-            this.color = stats.color;
-            this.x = startX;
-            this.y = startY;
-        }
-
-        update(player) {
-            if (!player) return;
-
-            // Calculate vector toward the player to facilitate tracking
-            const dx = player.x - this.x;
-            const dy = player.y - this.y;
-            const distance = Math.hypot(dx, dy);
-
-            // Normalize vector and apply speed to move enemy
-            if (distance > 0) {
-                this.x += (dx / distance) * this.speed;
-                this.y += (dy / distance) * this.speed;
+            // Deactivate if off-screen
+            if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                this.active = false;
             }
         }
 
@@ -151,20 +150,138 @@ const VerdikaGame = (function() {
         }
     }
 
-    /**
-     * --- SPAWN MANAGER ---
-     * Handles wave generation and entity instantiation slightly off-screen.
-     */
+    class Player {
+        constructor(archetypeKey) {
+            const stats = ARCHETYPES[archetypeKey] || ARCHETYPES['foundry_master'];
+            this.hp = stats.baseHp;
+            this.maxHp = stats.baseHp;
+            this.armor = stats.baseArmor;
+            this.maxSpeed = stats.speed; // Maximum allowed speed
+            
+            this.x = canvas.width / 2;
+            this.y = canvas.height / 2;
+            this.radius = 15; 
+            this.color = '#c0c0c0'; // Beskar Silver
+
+            this.lastShotTime = 0;
+            this.fireRate = 500; // milliseconds between shots
+        }
+
+        update() {
+            // Idle timeout check (stop moving if no interaction for 500ms)
+            if (inputState.isDragging && Date.now() - inputState.lastInteractionTime > 500) {
+                 inputState.isDragging = false;
+            }
+
+            if (inputState.isDragging) {
+                const dx = inputState.currentX - inputState.dragStartX;
+                const dy = inputState.currentY - inputState.dragStartY;
+                const distance = Math.hypot(dx, dy);
+
+                if (distance > 5) { // Deadzone to prevent jitter
+                    // Scale speed based on drag distance, capped at maxSpeed
+                    // A drag distance of 100 pixels represents max speed.
+                    const speedMultiplier = Math.min(distance / 100, 1);
+                    const currentSpeed = this.maxSpeed * speedMultiplier;
+
+                    this.x += (dx / distance) * currentSpeed;
+                    this.y += (dy / distance) * currentSpeed;
+                }
+            }
+            
+            this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
+            this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
+
+            // Auto-fire at nearest enemy
+            if (Date.now() - this.lastShotTime > this.fireRate && ACTIVE_ENTITIES.enemies.length > 0) {
+                this.shootNearest();
+            }
+        }
+
+        shootNearest() {
+            let nearestEnemy = null;
+            let minDistance = Infinity;
+
+            ACTIVE_ENTITIES.enemies.forEach(enemy => {
+                const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    nearestEnemy = enemy;
+                }
+            });
+
+            if (nearestEnemy) {
+                // Shoot projectile
+                ACTIVE_ENTITIES.projectiles.push(new Projectile(this.x, this.y, nearestEnemy.x, nearestEnemy.y, 8, 10));
+                this.lastShotTime = Date.now();
+            }
+        }
+
+        render() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = this.color;
+            ctx.fill();
+            ctx.closePath();
+
+            // Health bar
+            ctx.fillStyle = 'red';
+            ctx.fillRect(this.x - 15, this.y - 25, 30, 5);
+            ctx.fillStyle = 'green';
+            ctx.fillRect(this.x - 15, this.y - 25, 30 * (this.hp / this.maxHp), 5);
+        }
+    }
+
+    class Enemy {
+        constructor(typeKey, startX, startY) {
+            const stats = ENEMY_DICTIONARY[typeKey] || ENEMY_DICTIONARY['acolyte'];
+            this.type = typeKey;
+            this.hp = stats.hp;
+            this.maxHp = stats.hp;
+            this.speed = stats.speed;
+            this.radius = stats.radius;
+            this.damage = stats.damage;
+            this.color = stats.color;
+            this.x = startX;
+            this.y = startY;
+            this.active = true;
+        }
+
+        update(player) {
+            if (!player) return;
+
+            const dx = player.x - this.x;
+            const dy = player.y - this.y;
+            const distance = Math.hypot(dx, dy);
+
+            if (distance > 0) {
+                this.x += (dx / distance) * this.speed;
+                this.y += (dy / distance) * this.speed;
+            }
+        }
+
+        render() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = this.color;
+            ctx.fill();
+            ctx.closePath();
+            
+            // Enemy health bar
+            ctx.fillStyle = 'red';
+            ctx.fillRect(this.x - 10, this.y - 20, 20, 3);
+            ctx.fillStyle = 'green';
+            ctx.fillRect(this.x - 10, this.y - 20, 20 * (this.hp / this.maxHp), 3);
+        }
+    }
+
     function spawnWave(waveNumber) {
-        // Base enemy count scales with the wave number
         const enemyCount = waveNumber * 5;
         const enemyTypes = Object.keys(ENEMY_DICTIONARY).filter(type => type !== 'mudhorn');
 
         for (let i = 0; i < enemyCount; i++) {
-            // Pick a random horde/swarm enemy
             const randomType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
             
-            // Spawn randomly along the edges of the canvas
             let spawnX, spawnY;
             if (Math.random() < 0.5) {
                 spawnX = Math.random() < 0.5 ? -30 : canvas.width + 30;
@@ -178,19 +295,65 @@ const VerdikaGame = (function() {
         }
     }
 
-    /**
-     * --- COLLISION HANDLER ---
-     * Checks for intersections between bounding boxes.
-     */
     function checkCollisions() {
-        // 1. Projectiles vs. Enemies
-        // 2. Enemies vs. Player
-        // 3. Player vs. Pickups (Beskar Scrap)
+        // Projectiles vs Enemies
+        for (let i = ACTIVE_ENTITIES.projectiles.length - 1; i >= 0; i--) {
+            const p = ACTIVE_ENTITIES.projectiles[i];
+            for (let j = ACTIVE_ENTITIES.enemies.length - 1; j >= 0; j--) {
+                const e = ACTIVE_ENTITIES.enemies[j];
+                const dist = Math.hypot(p.x - e.x, p.y - e.y);
+                
+                if (dist < p.radius + e.radius) {
+                    // Hit!
+                    e.hp -= p.damage;
+                    p.active = false;
+                    
+                    if (e.hp <= 0) {
+                        e.active = false;
+                        gameState.beskarScrap += 10; // Reward
+                    }
+                    break; // Projectile destroyed, stop checking other enemies
+                }
+            }
+        }
+
+        // Clean up inactive entities
+        ACTIVE_ENTITIES.projectiles = ACTIVE_ENTITIES.projectiles.filter(p => p.active);
+        ACTIVE_ENTITIES.enemies = ACTIVE_ENTITIES.enemies.filter(e => e.active);
+
+        // Enemies vs Player
+        if (ACTIVE_ENTITIES.player) {
+            const p = ACTIVE_ENTITIES.player;
+            ACTIVE_ENTITIES.enemies.forEach(e => {
+                const dist = Math.hypot(p.x - e.x, p.y - e.y);
+                if (dist < p.radius + e.radius) {
+                    // Simple collision damage logic (needs cooldown/i-frames for real game)
+                    p.hp -= e.damage * 0.05; // Arbitrary tick damage
+
+                    if (p.hp <= 0) {
+                        handleGameOver();
+                    }
+                }
+            });
+        }
     }
 
-    /**
-     * Main rendering and logic loop. 
-     */
+    function handleGameOver() {
+        gameState.isRunning = false;
+        document.getElementById('game-over').style.display = 'flex';
+        document.getElementById('game-over-stats').innerText = `You reached Wave ${gameState.wave} and collected ${gameState.beskarScrap} Beskar Scrap.`;
+        saveProgress();
+    }
+
+    function resetGame() {
+        ACTIVE_ENTITIES.player = null;
+        ACTIVE_ENTITIES.enemies = [];
+        ACTIVE_ENTITIES.projectiles = [];
+        gameState.wave = 1;
+        gameState.beskarScrap = 0;
+        inputState.isDragging = false;
+    }
+
     function gameLoop(timestamp) {
         if (!gameState.isRunning) return;
         
@@ -200,9 +363,6 @@ const VerdikaGame = (function() {
         requestAnimationFrame(gameLoop);
     }
 
-    /**
-     * Calculates entity movement, hitboxes, and damage resolution.
-     */
     function updateLogic() {
         if (ACTIVE_ENTITIES.player) {
             ACTIVE_ENTITIES.player.update();
@@ -212,12 +372,11 @@ const VerdikaGame = (function() {
             enemy.update(ACTIVE_ENTITIES.player);
         });
 
+        ACTIVE_ENTITIES.projectiles.forEach(p => p.update());
+
         checkCollisions();
     }
 
-    /**
-     * Clears the previous frame and redraws all active sprites.
-     */
     function renderCanvas() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
@@ -228,12 +387,16 @@ const VerdikaGame = (function() {
         ACTIVE_ENTITIES.enemies.forEach(enemy => {
             enemy.render();
         });
+
+        ACTIVE_ENTITIES.projectiles.forEach(p => p.render());
+
+        // Simple HUD
+        ctx.fillStyle = '#fff';
+        ctx.font = '16px sans-serif';
+        ctx.fillText(`Wave: ${gameState.wave}`, 10, 20);
+        ctx.fillText(`Scrap: ${gameState.beskarScrap}`, 10, 40);
     }
 
-    /**
-     * Writes the current progress to LocalStorage immediately after purchasing 
-     * armor at the Covert Forge.
-     */
     function saveProgress() {
         localStorage.setItem('verdika_save_state', JSON.stringify(gameState));
     }
@@ -259,11 +422,16 @@ const VerdikaGame = (function() {
                 const selectedArchetype = document.getElementById('archetype-picker').value;
                 ACTIVE_ENTITIES.player = new Player(selectedArchetype);
 
-                // Spawn the first wave immediately upon start
                 spawnWave(gameState.wave);
 
                 gameState.isRunning = true;
                 requestAnimationFrame(gameLoop);
+            });
+
+            document.getElementById('btn-restart').addEventListener('click', () => {
+                document.getElementById('game-over').style.display = 'none';
+                document.getElementById('main-menu').style.display = 'flex';
+                resetGame();
             });
         }
     };
