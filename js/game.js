@@ -24,7 +24,6 @@ window.VerdikaGame = (function() {
     };
 
     // Centralized Data Dictionary: Shared with Utilities (Threat Log)
-    // Added Strill (Wolf/Hound) and Clansman archetypes with unique behaviors.
     const ENEMY_DICTIONARY = {
         'acolyte': { hp: 20, speed: 1.5, color: '#4682b4', type: 'horde', radius: 12, damage: 5, pros: 'Swarm tactics', cons: 'Low individual health', behavior: 'Erratic forward pursuit' },
         'strill': { hp: 30, speed: 2.5, color: '#8b4513', type: 'hound', radius: 10, damage: 8, pros: 'Fast, pack hunter', cons: 'Hesitates at range', behavior: 'Circles the edge, dives when close' },
@@ -246,14 +245,13 @@ window.VerdikaGame = (function() {
             ctx.fill();
             ctx.closePath();
 
-            // Re-attached closing braces to fix rendering scope error
             ctx.fillStyle = 'red';
             ctx.fillRect(this.x - 15, this.y - 24, 30, 4);
             ctx.fillStyle = 'green';
             ctx.fillRect(this.x - 15, this.y - 24, 30 * Math.max(0, (this.hp / this.maxHp)), 4);
         }
-        }
-        class Enemy {
+            }
+             class Enemy {
         constructor(typeKey, startX, startY, currentWave, indexId) {
             const stats = ENEMY_DICTIONARY[typeKey] || ENEMY_DICTIONARY['acolyte'];
             this.type = typeKey;
@@ -270,6 +268,12 @@ window.VerdikaGame = (function() {
             this.x = startX;
             this.y = startY;
             this.active = true;
+
+            // Stealth & Awareness Properties
+            this.isAware = false;
+            this.viewingDistance = this.radius * 10; 
+            this.fov = Math.PI / 2; // 90 degree arc
+            this.patrolTimer = Math.floor(Math.random() * 60);
 
             this.state = 'observing'; 
             this.stateTimer = Math.floor(Math.random() * 40) + 20;
@@ -290,152 +294,204 @@ window.VerdikaGame = (function() {
             const dy = player.y - this.y;
             const distanceToPlayer = Math.hypot(dx, dy);
             const directAngleToPlayer = Math.atan2(dy, dx);
-
-            // GLOBAL: Erratic wander generation (Simulates organic "imperfect" movement)
             const wanderAngle = Math.sin(this.ticks * 0.05 + this.randomSeed) * 0.4;
             let targetAngle = directAngleToPlayer + wanderAngle;
 
-            // --- ARCHETYPE-SPECIFIC AI BEHAVIORS ---
-            if (this.type === 'strill') {
-                // STRILL (Wolf/Hound): Circles the perimeter, dives when player gets too close
-                this.state = 'moving';
-                if (distanceToPlayer > 180) {
-                    // Circle around by adding 90 degrees to direct angle
-                    targetAngle = directAngleToPlayer + (Math.PI / 2) + wanderAngle;
-                    this.speed = this.baseSpeed * 1.2;
-                } else {
-                    // Dive bomb straight in
-                    targetAngle = directAngleToPlayer;
-                    this.speed = this.baseSpeed * 1.8;
+            // --- AWARENESS & STEALTH LOGIC ---
+            if (!this.isAware) {
+                // 1. Direct Vision Check
+                let angleDiff = Math.abs(directAngleToPlayer - this.angle);
+                while (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
+
+                if (distanceToPlayer < this.viewingDistance && angleDiff < this.fov / 2) {
+                    this.isAware = true;
                 }
-                this.angle = targetAngle;
-                this.x += Math.cos(this.angle) * this.speed;
-                this.y += Math.sin(this.angle) * this.speed;
+
+                // 2. Cascade Vision Check (Look for aware friends)
+                if (!this.isAware) {
+                    let friendSpotted = false;
+                    let friendTargetAngle = this.angle;
+
+                    for (let i = 0; i < ACTIVE_ENTITIES.enemies.length; i++) {
+                        let friend = ACTIVE_ENTITIES.enemies[i];
+                        if (friend !== this && friend.isAware) {
+                            let fdx = friend.x - this.x;
+                            let fdy = friend.y - this.y;
+                            let distToFriend = Math.hypot(fdx, fdy);
+                            let angleToFriend = Math.atan2(fdy, fdx);
+
+                            let fAngleDiff = Math.abs(angleToFriend - this.angle);
+                            while (fAngleDiff > Math.PI) fAngleDiff = Math.PI * 2 - fAngleDiff;
+
+                            if (distToFriend < this.viewingDistance && fAngleDiff < this.fov / 2) {
+                                friendSpotted = true;
+                                friendTargetAngle = directAngleToPlayer; 
+                                break;
+                            }
+                        }
+                    }
+
+                    if (friendSpotted) {
+                        // Slowly pan the viewing arc towards where the friend is attacking
+                        let diff = friendTargetAngle - this.angle;
+                        while (diff < -Math.PI) diff += Math.PI * 2;
+                        while (diff > Math.PI) diff -= Math.PI * 2;
+                        this.angle += Math.max(-0.015, Math.min(0.015, diff));
+                    } else {
+                        // Patrol Behavior
+                        this.patrolTimer--;
+                        if (this.patrolTimer <= 0) {
+                            this.angle += Math.PI + (Math.random() * 0.5 - 0.25); // Turn around
+                            this.patrolTimer = 120 + Math.floor(Math.random() * 60);
+                        }
+                        this.speed = this.baseSpeed * 0.3; // Move slow when unaware
+                        this.x += Math.cos(this.angle) * this.speed;
+                        this.y += Math.sin(this.angle) * this.speed;
+                    }
+                }
             }
-            else if (this.type === 'clansman') {
-                // CLANSMAN: Fights in pairs. Runs to the edge if no backup is found.
-                let hasBackup = ACTIVE_ENTITIES.enemies.some(e => e !== this && e.type === 'clansman' && Math.hypot(e.x - this.x, e.y - this.y) < 250);
-                
-                if (!hasBackup) {
-                    this.state = 'fleeing';
-                    // Run away from player, slight jitter
-                    targetAngle = directAngleToPlayer + Math.PI + wanderAngle;
-                    this.speed = this.baseSpeed * 1.5; 
-                } else {
+
+            // --- ARCHETYPE-SPECIFIC AI BEHAVIORS (Only run if Aware) ---
+            if (this.isAware) {
+                if (this.type === 'strill') {
+                    this.state = 'moving';
+                    if (distanceToPlayer > 180) {
+                        targetAngle = directAngleToPlayer + (Math.PI / 2) + wanderAngle;
+                        this.speed = this.baseSpeed * 1.2;
+                    } else {
+                        targetAngle = directAngleToPlayer;
+                        this.speed = this.baseSpeed * 1.8;
+                    }
+                    this.angle = targetAngle;
+                    this.x += Math.cos(this.angle) * this.speed;
+                    this.y += Math.sin(this.angle) * this.speed;
+                }
+                else if (this.type === 'clansman') {
+                    let hasBackup = ACTIVE_ENTITIES.enemies.some(e => e !== this && e.type === 'clansman' && Math.hypot(e.x - this.x, e.y - this.y) < 250);
+                    if (!hasBackup) {
+                        this.state = 'fleeing';
+                        targetAngle = directAngleToPlayer + Math.PI + wanderAngle;
+                        this.speed = this.baseSpeed * 1.5; 
+                    } else {
+                        this.state = 'moving';
+                        this.speed = this.baseSpeed;
+                    }
+                    this.angle = targetAngle;
+                    this.x += Math.cos(this.angle) * this.speed;
+                    this.y += Math.sin(this.angle) * this.speed;
+                }
+                else if (this.type === 'acolyte') {
+                    if (this.state === 'observing') {
+                        this.angle = targetAngle;
+                        this.stateTimer--;
+                        if (this.stateTimer <= 0) {
+                            this.state = 'moving';
+                            this.stateTimer = 90; 
+                        }
+                    } else if (this.state === 'moving') {
+                        this.angle = targetAngle;
+                        this.speed = this.baseSpeed;
+                        this.x += Math.cos(this.angle) * this.speed;
+                        this.y += Math.sin(this.angle) * this.speed;
+                        this.stateTimer--;
+                        if (this.stateTimer <= 0) {
+                            this.state = 'observing';
+                            this.stateTimer = 25; 
+                        }
+                    }
+                } 
+                else if (this.type === 'krayt') {
+                    if (this.state === 'fleeing') {
+                        this.angle = directAngleToPlayer + Math.PI; 
+                        this.x += Math.cos(this.angle) * (this.speed * 1.4);
+                        this.y += Math.sin(this.angle) * (this.speed * 1.4);
+                        this.stateTimer--;
+                        if (this.stateTimer <= 0) {
+                            this.state = 'moving';
+                        }
+                    } else {
+                        this.state = 'moving';
+                        this.speed = this.baseSpeed;
+                        const weaveAngle = directAngleToPlayer + Math.sin(this.ticks * 0.15) * 1.2;
+                        this.angle = weaveAngle;
+                        this.x += Math.cos(this.angle) * this.speed;
+                        this.y += Math.sin(this.angle) * this.speed;
+                    }
+                } 
+                else if (this.type === 'mercenary') {
                     this.state = 'moving';
                     this.speed = this.baseSpeed;
-                }
-                
-                this.angle = targetAngle;
-                this.x += Math.cos(this.angle) * this.speed;
-                this.y += Math.sin(this.angle) * this.speed;
-            }
-            else if (this.type === 'acolyte') {
-                // ACOLYTE: Staggered pulse pursuit + wandering
-                if (this.state === 'observing') {
-                    this.angle = targetAngle;
-                    this.stateTimer--;
-                    if (this.stateTimer <= 0) {
-                        this.state = 'moving';
-                        this.stateTimer = 90; 
-                    }
-                } else if (this.state === 'moving') {
-                    this.angle = targetAngle;
-                    this.x += Math.cos(this.angle) * this.speed;
-                    this.y += Math.sin(this.angle) * this.speed;
-                    this.stateTimer--;
-                    if (this.stateTimer <= 0) {
-                        this.state = 'observing';
-                        this.stateTimer = 25; 
-                    }
-                }
-            } 
-            else if (this.type === 'krayt') {
-                // KRAYT: High-speed erratic weave
-                if (this.state === 'fleeing') {
-                    this.angle = directAngleToPlayer + Math.PI; 
-                    this.x += Math.cos(this.angle) * (this.speed * 1.4);
-                    this.y += Math.sin(this.angle) * (this.speed * 1.4);
-                    this.stateTimer--;
-                    if (this.stateTimer <= 0) {
-                        this.state = 'moving';
-                    }
-                } else {
-                    this.state = 'moving';
-                    const weaveAngle = directAngleToPlayer + Math.sin(this.ticks * 0.15) * 1.2;
-                    this.angle = weaveAngle;
-                    this.x += Math.cos(this.angle) * this.speed;
-                    this.y += Math.sin(this.angle) * this.speed;
-                }
-            } 
-            else if (this.type === 'mercenary') {
-                // MERCENARY: Roman Phalanx locked march
-                this.state = 'moving';
-                const marchTargetX = player.x + this.formationOffsetX;
-                const marchTargetY = player.y + this.formationOffsetY;
-                const angleToFormation = Math.atan2(marchTargetY - this.y, marchTargetX - this.x);
-                
-                this.angle = directAngleToPlayer; 
-                this.x += Math.cos(angleToFormation) * this.speed;
-                this.y += Math.sin(angleToFormation) * this.speed;
-            } 
-            else if (this.type === 'mudhorn') {
-                // MUDHORN: Large turning radius & high-speed CHARGE
-                if (this.state === 'charging') {
-                    this.x += Math.cos(this.angle) * 6.5; 
-                    this.y += Math.sin(this.angle) * 6.5;
+                    const marchTargetX = player.x + this.formationOffsetX;
+                    const marchTargetY = player.y + this.formationOffsetY;
+                    const angleToFormation = Math.atan2(marchTargetY - this.y, marchTargetX - this.x);
                     
-                    if (this.ticks % 2 === 0) {
-                        ACTIVE_ENTITIES.particles.push(new Particle(this.x, this.y, 'rgba(139, 90, 43, '));
-                    }
+                    this.angle = directAngleToPlayer; 
+                    this.x += Math.cos(angleToFormation) * this.speed;
+                    this.y += Math.sin(angleToFormation) * this.speed;
+                } 
+                else if (this.type === 'mudhorn') {
+                    if (this.state === 'charging') {
+                        this.x += Math.cos(this.angle) * 6.5; 
+                        this.y += Math.sin(this.angle) * 6.5;
+                        if (this.ticks % 2 === 0) {
+                            ACTIVE_ENTITIES.particles.push(new Particle(this.x, this.y, 'rgba(139, 90, 43, '));
+                }
+                this.stateTimer--;
+                        if (this.stateTimer <= 0 || this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                            this.state = 'exhausted';
+                            this.stateTimer = 50; 
+                        }
+                    } else if (this.state === 'exhausted') {
+                        this.stateTimer--;
+                        if (this.stateTimer <= 0) {
+                            this.state = 'observing';
+                        }
+                    } else {
+                        this.speed = this.baseSpeed;
+                        let diff = directAngleToPlayer - this.angle;
+                        while (diff < -Math.PI) diff += Math.PI * 2;
+                        while (diff > Math.PI) diff -= Math.PI * 2;
+                        
+                        const maxTurn = 0.035; 
+                        this.angle += Math.max(-maxTurn, Math.min(maxTurn, diff));
+                        this.x += Math.cos(this.angle) * this.speed;
+                        this.y += Math.sin(this.angle) * this.speed;
 
-                    this.stateTimer--;
-                    if (this.stateTimer <= 0 || this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
-                        this.state = 'exhausted';
-                        this.stateTimer = 50; 
-                    }
-                } else if (this.state === 'exhausted') {
-                    this.stateTimer--;
-                    if (this.stateTimer <= 0) {
-                        this.state = 'observing';
-                    }
-                } else {
-                    let diff = directAngleToPlayer - this.angle;
-                    while (diff < -Math.PI) diff += Math.PI * 2;
-                    while (diff > Math.PI) diff -= Math.PI * 2;
-                    
-                    const maxTurn = 0.035; 
-                    this.angle += Math.max(-maxTurn, Math.min(maxTurn, diff));
-
-                    this.x += Math.cos(this.angle) * this.speed;
-                    this.y += Math.sin(this.angle) * this.speed;
-
-                    if (Math.abs(diff) < 0.2 && distanceToPlayer < 350 && distanceToPlayer > 80) {
-                        this.state = 'charging';
-                        this.stateTimer = 45; 
+                        if (Math.abs(diff) < 0.2 && distanceToPlayer < 350 && distanceToPlayer > 80) {
+                            this.state = 'charging';
+                            this.stateTimer = 45; 
+                        }
                     }
                 }
             }
 
-            // Universal boundary clamping
+            // Universal boundary clamping and bouncing (keeps patrols on screen)
+            if (this.x <= this.radius || this.x >= canvas.width - this.radius ||
+                this.y <= this.radius || this.y >= canvas.height - this.radius) {
+                this.angle += Math.PI; 
+            }
             this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
             this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
         }
 
         render() {
+            // Render Viewing Arc based on Awareness State
             ctx.beginPath();
-            ctx.arc(this.x, this.y, this.radius + 2, this.angle - Math.PI/4, this.angle + Math.PI/4);
+            ctx.moveTo(this.x, this.y);
+            ctx.arc(this.x, this.y, this.viewingDistance, this.angle - this.fov/2, this.angle + this.fov/2);
             ctx.lineTo(this.x, this.y);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; 
+            ctx.fillStyle = this.isAware ? 'rgba(255, 69, 0, 0.2)' : 'rgba(255, 255, 255, 0.15)'; 
             ctx.fill();
             ctx.closePath();
 
+            // Render Entity
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
             ctx.fillStyle = this.color;
             ctx.fill();
             ctx.closePath();
             
+            // Render Health Bar
             ctx.fillStyle = 'red';
             ctx.fillRect(this.x - 12, this.y - (this.radius + 8), 24, 3);
             ctx.fillStyle = 'green';
@@ -473,6 +529,7 @@ window.VerdikaGame = (function() {
                 
                 if (dist < p.radius + e.radius) {
                     e.hp -= p.damage;
+                    e.isAware = true; // Force awareness on hit
                     p.active = false;
                     
                     if (e.hp <= 0) {
@@ -520,6 +577,7 @@ window.VerdikaGame = (function() {
 
                 if (distance < minDistance) {
                     p.hp -= e.damage * 0.05; 
+                    e.isAware = true; // Wake up enemy if player bumps them
 
                     const nx = dx / distance;
                     const ny = dy / distance;
@@ -710,5 +768,4 @@ window.VerdikaGame = (function() {
 
 document.addEventListener('DOMContentLoaded', () => {
     window.VerdikaGame.init();
-});
-                            
+});        
