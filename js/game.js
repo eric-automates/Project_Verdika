@@ -5,7 +5,7 @@
  * Description: Core logic loop, object rendering, and combat resolution.
  * Architecture Rules:
  *   - Zero-Dependency: Uses requestAnimationFrame for native 60FPS looping.
- *   - OpSec/Privacy: Saves player stats directly to LocalStorage at wave ends.
+ *   - OpSec/Privacy: Resilient against strict-browser storage blocking.
  *   - Modularity: Wraps all logic in an IIFE to prevent global namespace pollution.
  * Mandatory Update Points:
  *   - Any new enemy archetypes or boss signets MUST be added to the ENEMY_DICTIONARY.
@@ -232,12 +232,16 @@ const VerdikaGame = (function() {
     }
 
     class Enemy {
-        constructor(typeKey, startX, startY) {
+        constructor(typeKey, startX, startY, currentWave) {
             const stats = ENEMY_DICTIONARY[typeKey] || ENEMY_DICTIONARY['acolyte'];
             this.type = typeKey;
-            this.hp = stats.hp;
-            this.maxHp = stats.hp;
-            this.speed = stats.speed;
+            
+            // Health scales exponentially with wave number, speed remains capped
+            const healthScale = Math.pow(1.1, currentWave - 1);
+            this.hp = Math.floor(stats.hp * healthScale);
+            this.maxHp = this.hp;
+            
+            this.speed = stats.speed; // Speed remains static to prevent undodgeable enemies
             this.radius = stats.radius;
             this.damage = stats.damage;
             this.color = stats.color;
@@ -275,6 +279,7 @@ const VerdikaGame = (function() {
     }
 
     function spawnWave(waveNumber) {
+        // Density increases linearly per wave
         const enemyCount = waveNumber * 5;
         const enemyTypes = Object.keys(ENEMY_DICTIONARY).filter(type => type !== 'mudhorn');
 
@@ -290,7 +295,7 @@ const VerdikaGame = (function() {
                 spawnY = Math.random() < 0.5 ? -30 : canvas.height + 30;
             }
 
-            ACTIVE_ENTITIES.enemies.push(new Enemy(randomType, spawnX, spawnY));
+            ACTIVE_ENTITIES.enemies.push(new Enemy(randomType, spawnX, spawnY, waveNumber));
         }
     }
 
@@ -377,7 +382,6 @@ const VerdikaGame = (function() {
         checkCollisions();
 
         // Wave Progression Check
-        // System actively monitors the board. Saves progress natively for offline persistence at wave ends.
         if (ACTIVE_ENTITIES.enemies.length === 0 && ACTIVE_ENTITIES.player && gameState.isRunning) {
             gameState.wave++;
             saveProgress(); 
@@ -406,7 +410,12 @@ const VerdikaGame = (function() {
     }
 
     function saveProgress() {
-        localStorage.setItem('verdika_save_state', JSON.stringify(gameState));
+        // OpSec/Privacy: Wrapped in try-catch to prevent fatal game crashes if LocalStorage is blocked by strict browsers
+        try {
+            localStorage.setItem('verdika_save_state', JSON.stringify(gameState));
+        } catch (e) {
+            console.warn('OpSec: LocalStorage blocked by browser privacy settings. Progress not saved this session.');
+        }
     }
 
     function resizeCanvas() {
@@ -446,7 +455,6 @@ const VerdikaGame = (function() {
             });
 
             // --- CUSTOM EVENT LISTENERS ---
-            // Listens for events dispatched by utilities.js to handle pausing and quitting
             window.addEventListener('verdikaPauseGame', () => {
                 gameState.isRunning = false; // Halts the requestAnimationFrame loop
             });
@@ -462,7 +470,6 @@ const VerdikaGame = (function() {
             window.addEventListener('verdikaQuitToMenu', () => {
                 gameState.isRunning = false;
                 
-                // Calculates final scrap, clears game entities, and saves progress
                 saveProgress(); 
                 
                 document.getElementById('main-menu').style.display = 'flex';
@@ -479,4 +486,4 @@ const VerdikaGame = (function() {
 document.addEventListener('DOMContentLoaded', () => {
     VerdikaGame.init();
 });
-                  
+                        
