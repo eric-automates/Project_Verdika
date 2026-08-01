@@ -6,7 +6,7 @@
  *              dropdown, Settings Modals, real-time Health Gauges, and the Parking Lot backlog.
  * Architecture Rules:
  *   - Zero-Dependency: Pure Vanilla JavaScript, no external libraries.
- *   - OpSec/Privacy: Uses strictly LocalStorage for saving Parking Lot notes.
+ *   - OpSec/Privacy: Gracefully handles LocalStorage security blocks common in privacy browsers.
  *   - DOM Interaction: Hooks into the semantic HTML5 foundation without inline 
  *     styles to separate content from presentation.
  * Mandatory Update Points:
@@ -38,11 +38,14 @@ const VerdikaUtilities = (function() {
 
     /**
      * Initializes the Help Button overlay.
+     * Toggles text contextually to improve user navigation.
      */
     function initHelp() {
         elements.btnHelp.addEventListener('click', () => {
             const isHidden = elements.aboutDropdown.style.display === 'none';
             elements.aboutDropdown.style.display = isHidden ? 'block' : 'none';
+            // Contextual text update based on user feedback
+            elements.btnHelp.textContent = isHidden ? 'Return' : 'Help';
         });
     }
 
@@ -141,7 +144,7 @@ const VerdikaUtilities = (function() {
         updateGauges(fps, dom, mem) {
             if (elements.healthGaugesTarget) {
                 elements.healthGaugesTarget.innerHTML = `
-                    <p>Version: 1.0.1 | Offline-first survival roguelite.</p>
+                    <p>Version: 1.0.2 | Offline-first survival roguelite.</p>
                     <h4>Diagnostic Gauges</h4>
                     <p>FPS Engine: ${fps}%</p>
                     <p>DOM Bloat: ${dom}%</p>
@@ -152,13 +155,27 @@ const VerdikaUtilities = (function() {
     }
 
     function initParkingLot() {
-        const savedNotes = localStorage.getItem('verdika_parking_lot') || '[]';
-        const notes = JSON.parse(savedNotes);
+        // Pre-populating with brainstormed tasks
+        let notes = [
+            'Implement Between-Wave Shop for Scrap Spending',
+            'Determine Auto-pickup vs Looting Mini-game',
+            'Design AI Allies/Squad Companions'
+        ];
+
+        // OpSec/Privacy: Wrapped in try-catch because privacy browsers (DuckDuckGo) block localStorage
+        try {
+            const savedNotes = localStorage.getItem('verdika_parking_lot');
+            if (savedNotes) {
+                notes = JSON.parse(savedNotes);
+            }
+        } catch (e) {
+            console.warn('OpSec: LocalStorage access blocked. Proceeding with default Parking Lot.');
+        }
 
         elements.parkingLot.innerHTML = '<h3>Parking Lot Backlog</h3>';
         notes.forEach(note => {
             const p = document.createElement('p');
-            p.textContent = note;
+            p.textContent = '- ' + note;
             elements.parkingLot.appendChild(p);
         });
     }
