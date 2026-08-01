@@ -2,13 +2,13 @@
  * =============================================================================
  * File: game.js (Part 1)
  * Project: Project_Verdika
- * Description: Core logic loop, object rendering, and combat resolution.
+ * Description: Core logic loop, object rendering, and player/particle models.
  * Architecture Rules:
- *   - Zero-Dependency: Uses requestAnimationFrame for native 60FPS looping[span_15](start_span)[span_15](end_span).
- *   - OpSec/Privacy: Resilient against strict-browser storage blocking[span_16](start_span)[span_16](end_span).
- *   - Modularity: Wraps all logic in an IIFE, attached explicitly to window[span_17](start_span)[span_17](end_span).
+ *   - Zero-Dependency: Uses requestAnimationFrame for native 60FPS looping.
+ *   - OpSec/Privacy: Resilient against strict-browser storage blocking.
+ *   - Modularity: Wraps all logic in an IIFE, attached explicitly to window.
  * Mandatory Update Points:
- *   - Any new enemy archetypes MUST be added to the ENEMY_DICTIONARY[span_18](start_span)[span_18](end_span).
+ *   - Any new enemy archetypes MUST be added to the ENEMY_DICTIONARY.
  * =============================================================================
  */
 
@@ -22,12 +22,12 @@ window.VerdikaGame = (function() {
         activeSignet: null 
     };
 
-    // Centralized Data Dictionary: Used by both the Game Engine and Utilities (Threat Log)
+    // Centralized Data Dictionary: Shared with Utilities (Threat Log)
     const ENEMY_DICTIONARY = {
         'acolyte': { hp: 20, speed: 1.5, color: '#4682b4', type: 'horde', radius: 12, damage: 5, pros: 'Swarm tactics', cons: 'Low individual health', behavior: 'Direct pursuit after observing' },
-        'krayt': { hp: 10, speed: 2.5, color: '#228b22', type: 'swarm', radius: 8, damage: 2, pros: 'Extremely fast', cons: 'Fragile', behavior: 'Erratic movement, hit and run' },
-        'mercenary': { hp: 50, speed: 0.8, color: '#696969', type: 'heavy', radius: 18, damage: 10, pros: 'High armor & damage', cons: 'Slow movement', behavior: 'Roman Phalanx rigid grid formation' },
-        'mudhorn': { hp: 500, speed: 3.5, color: '#8b5a2b', type: 'boss', radius: 40, damage: 25, signetDrop: 'mudhorn_horn', pros: 'Devastating charge', cons: 'Large turning radius', behavior: 'Relentless aggression' }
+        'krayt': { hp: 10, speed: 2.8, color: '#228b22', type: 'swarm', radius: 8, damage: 2, pros: 'Extremely fast', cons: 'Fragile', behavior: 'Erratic movement, hit and run' },
+        'mercenary': { hp: 50, speed: 0.9, color: '#696969', type: 'heavy', radius: 18, damage: 10, pros: 'High armor & damage', cons: 'Slow movement', behavior: 'Roman Phalanx rigid grid formation' },
+        'mudhorn': { hp: 500, speed: 1.2, color: '#8b5a2b', type: 'boss', radius: 35, damage: 25, signetDrop: 'mudhorn_horn', pros: 'Devastating charge', cons: 'Large turning radius', behavior: 'Relentless aggression' }
     };
 
     const ACTIVE_ENTITIES = {
@@ -56,13 +56,20 @@ window.VerdikaGame = (function() {
     function initInput() {
         canvas.addEventListener('touchstart', handlePointerDown, {passive: false});
         canvas.addEventListener('touchmove', handlePointerMove, {passive: false});
-        canvas.addEventListener('touchend', handlePointerUp);
-        canvas.addEventListener('touchcancel', handlePointerUp);
+        canvas.addEventListener('touchend', handlePointerUp, {passive: false});
+        canvas.addEventListener('touchcancel', handlePointerUp, {passive: false});
         
         canvas.addEventListener('mousedown', handlePointerDown);
         canvas.addEventListener('mousemove', handlePointerMove);
         canvas.addEventListener('mouseup', handlePointerUp);
         canvas.addEventListener('mouseleave', handlePointerUp);
+
+        // Global touchlock to prevent DuckDuckGo / Chrome pull-down scroll
+        window.addEventListener('touchmove', (e) => {
+            if (gameState.isRunning) {
+                e.preventDefault();
+            }
+        }, { passive: false });
     }
 
     function handlePointerDown(e) {
@@ -109,18 +116,18 @@ window.VerdikaGame = (function() {
     }
 
     class Particle {
-        constructor(x, y) {
+        constructor(x, y, colorStr = 'rgba(169, 169, 169, ') {
             this.x = x;
             this.y = y;
-            this.radius = Math.random() * 8 + 6; 
+            this.radius = Math.random() * 6 + 4; 
             this.life = 1.0; 
-            this.decay = Math.random() * 0.02 + 0.015; 
-            this.color = `rgba(169, 169, 169, `; 
+            this.decay = Math.random() * 0.03 + 0.02; 
+            this.color = colorStr; 
         }
 
         update() {
             this.life -= this.decay;
-            this.radius += 0.3; 
+            this.radius += 0.2; 
         }
 
         render() {
@@ -138,7 +145,7 @@ window.VerdikaGame = (function() {
             this.y = y;
             this.speed = speed;
             this.damage = damage;
-            this.radius = 3;
+            this.radius = 3.5;
             this.color = '#ffd700'; 
             this.active = true;
 
@@ -181,7 +188,7 @@ window.VerdikaGame = (function() {
             this.color = '#c0c0c0'; 
 
             this.lastShotTime = 0;
-            this.fireRate = 500; 
+            this.fireRate = 450; 
         }
 
         update() {
@@ -224,7 +231,7 @@ window.VerdikaGame = (function() {
             });
 
             if (nearestEnemy) {
-                ACTIVE_ENTITIES.projectiles.push(new Projectile(this.x, this.y, nearestEnemy.x, nearestEnemy.y, 8, 10));
+                ACTIVE_ENTITIES.projectiles.push(new Projectile(this.x, this.y, nearestEnemy.x, nearestEnemy.y, 9, 10));
                 this.lastShotTime = Date.now();
             }
         }
@@ -237,22 +244,20 @@ window.VerdikaGame = (function() {
             ctx.closePath();
 
             ctx.fillStyle = 'red';
-            ctx.fillRect(this.x - 15, this.y - 25, 30, 5);
+            ctx.fillRect(this.x - 15, this.y - 24, 30, 4);
             ctx.fillStyle = 'green';
-            ctx.fillRect(this.x - 15, this.y - 25, 30 * (this.hp / this.maxHp), 5);
-        }
-    }
-        class Enemy {
+            ctx.fillRect(this.x - 15, this.y - 24, 30 * Math.max(0, (this.hp / this.maxHp)), 4);
+     class Enemy {
         constructor(typeKey, startX, startY, currentWave, indexId) {
             const stats = ENEMY_DICTIONARY[typeKey] || ENEMY_DICTIONARY['acolyte'];
             this.type = typeKey;
             
-            // Health Scaling per wave[span_19](start_span)[span_19](end_span)
-            const healthScale = Math.pow(1.1, currentWave - 1);
+            const healthScale = Math.pow(1.10, currentWave - 1);
             this.hp = Math.floor(stats.hp * healthScale);
             this.maxHp = this.hp;
             
-            this.speed = stats.speed; 
+            this.baseSpeed = stats.speed; 
+            this.speed = stats.speed;
             this.radius = stats.radius;
             this.damage = stats.damage;
             this.color = stats.color;
@@ -260,59 +265,130 @@ window.VerdikaGame = (function() {
             this.y = startY;
             this.active = true;
 
+            // AI Behavior Engine States
             this.state = 'observing'; 
-            this.stateTimer = Math.floor(Math.random() * 60) + 30;
-            this.angle = 0; 
+            this.stateTimer = Math.floor(Math.random() * 40) + 20;
+            this.angle = Math.atan2(canvas.height/2 - startY, canvas.width/2 - startX); 
             
-            this.formationOffsetX = (indexId % 5) * 40 - 80;
-            this.formationOffsetY = Math.floor(indexId / 5) * 40 - 80;
+            // Phalanx formation offset relative to wave index
+            this.formationOffsetX = (indexId % 4) * 45 - 60;
+            this.formationOffsetY = Math.floor(indexId / 4) * 45 - 60;
+
+            // Boss charge tracking
+            this.chargeTargetX = 0;
+            this.chargeTargetY = 0;
+            this.ticks = Math.floor(Math.random() * 100);
         }
 
         update(player) {
             if (!player) return;
 
+            this.ticks++;
             const dx = player.x - this.x;
             const dy = player.y - this.y;
             const distanceToPlayer = Math.hypot(dx, dy);
             const directAngleToPlayer = Math.atan2(dy, dx);
 
-            if (this.state === 'observing') {
-                this.angle = directAngleToPlayer;
-                this.stateTimer--;
-                if (this.stateTimer <= 0) {
-                    this.state = 'moving';
+            // --- ARCHETYPE-SPECIFIC AI BEHAVIORS ---
+            if (this.type === 'acolyte') {
+                // ACOLYTE (Horde): Staggered pulse pursuit
+                if (this.state === 'observing') {
+                    this.angle = directAngleToPlayer;
+                    this.stateTimer--;
+                    if (this.stateTimer <= 0) {
+                        this.state = 'moving';
+                        this.stateTimer = 90; // Move for ~1.5s
+                    }
+                } else if (this.state === 'moving') {
+                    this.angle = directAngleToPlayer;
+                    this.x += Math.cos(this.angle) * this.speed;
+                    this.y += Math.sin(this.angle) * this.speed;
+                    this.stateTimer--;
+                    if (this.stateTimer <= 0) {
+                        this.state = 'observing';
+                        this.stateTimer = 25; // Brief re-lock pause
+                    }
                 }
             } 
-            else if (this.state === 'moving') {
-                let targetAngle = directAngleToPlayer;
-
-                if (this.type === 'mercenary') {
-                    const formationTargetX = player.x + Math.cos(directAngleToPlayer) * 150 + this.formationOffsetX;
-                    const formationTargetY = player.y + Math.sin(directAngleToPlayer) * 150 + this.formationOffsetY;
-                    targetAngle = Math.atan2(formationTargetY - this.y, formationTargetX - this.x);
-                } 
-                else if (this.type === 'krayt' && distanceToPlayer < 100) {
-                    targetAngle += (Math.random() - 0.5) * 1.5; 
+            else if (this.type === 'krayt') {
+                // KRAYT (Swarm): High-speed erratic weave & rapid hit-and-run
+                if (this.state === 'fleeing') {
+                    this.angle = directAngleToPlayer + Math.PI; // Face away
+                    this.x += Math.cos(this.angle) * (this.speed * 1.4);
+                    this.y += Math.sin(this.angle) * (this.speed * 1.4);
+                    this.stateTimer--;
+                    if (this.stateTimer <= 0) {
+                        this.state = 'moving';
+                    }
+                } else {
+                    this.state = 'moving';
+                    // Weave trajectory using sine wave offset
+                    const weaveAngle = directAngleToPlayer + Math.sin(this.ticks * 0.15) * 0.8;
+                    this.angle = weaveAngle;
+                    this.x += Math.cos(this.angle) * this.speed;
+                    this.y += Math.sin(this.angle) * this.speed;
                 }
-
-                this.angle = targetAngle;
-                this.x += Math.cos(this.angle) * this.speed;
-                this.y += Math.sin(this.angle) * this.speed;
-            }
-            else if (this.state === 'fleeing') {
-                this.angle = directAngleToPlayer + Math.PI; 
-                this.x += Math.cos(this.angle) * (this.speed * 1.5); 
-                this.y += Math.sin(this.angle) * (this.speed * 1.5);
+            } 
+            else if (this.type === 'mercenary') {
+                // MERCENARY (Heavy): Roman Phalanx locked march
+                this.state = 'moving';
+                // Target a grid position marching relentlessly in line relative to player
+                const marchTargetX = player.x + this.formationOffsetX;
+                const marchTargetY = player.y + this.formationOffsetY;
+                const angleToFormation = Math.atan2(marchTargetY - this.y, marchTargetX - this.x);
                 
-                this.stateTimer--;
-                if (this.stateTimer <= 0) {
-                    this.state = 'observing';
-                    this.stateTimer = 45; 
+                this.angle = directAngleToPlayer; // Keep facing player
+                this.x += Math.cos(angleToFormation) * this.speed;
+                this.y += Math.sin(angleToFormation) * this.speed;
+            } 
+            else if (this.type === 'mudhorn') {
+                // MUDHORN (Boss): Large turning radius & high-speed CHARGE
+                if (this.state === 'charging') {
+                    this.x += Math.cos(this.angle) * 6.5; // High speed charge
+                    this.y += Math.sin(this.angle) * 6.5;
+                    
+                    // Smoke trail particles
+                    if (this.ticks % 2 === 0) {
+                        ACTIVE_ENTITIES.particles.push(new Particle(this.x, this.y, 'rgba(139, 90, 43, '));
+                    }
+
+                    this.stateTimer--;
+                    if (this.stateTimer <= 0 || this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                        this.state = 'exhausted';
+                        this.stateTimer = 50; // Pause after charge
+                    }
+                } else if (this.state === 'exhausted') {
+                    this.stateTimer--;
+                    if (this.stateTimer <= 0) {
+                        this.state = 'observing';
+                    }
+                } else {
+                    // Turn slowly toward player
+                    let diff = directAngleToPlayer - this.angle;
+                    while (diff < -Math.PI) diff += Math.PI * 2;
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+                    
+                    const maxTurn = 0.035; // Turning radius constraint
+                    this.angle += Math.max(-maxTurn, Math.min(maxTurn, diff));
+
+                    this.x += Math.cos(this.angle) * this.speed;
+                    this.y += Math.sin(this.angle) * this.speed;
+
+                    // Trigger Charge if lined up with player
+                    if (Math.abs(diff) < 0.2 && distanceToPlayer < 350 && distanceToPlayer > 80) {
+                        this.state = 'charging';
+                        this.stateTimer = 45; // Charge duration
+                    }
                 }
             }
+
+            // Universal boundary clamping
+            this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
+            this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
         }
 
         render() {
+            // Draw Facing Indicator / Visor Arc
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.radius + 2, this.angle - Math.PI/4, this.angle + Math.PI/4);
             ctx.lineTo(this.x, this.y);
@@ -320,55 +396,45 @@ window.VerdikaGame = (function() {
             ctx.fill();
             ctx.closePath();
 
+            // Draw Core Body
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
             ctx.fillStyle = this.color;
             ctx.fill();
             ctx.closePath();
             
+            // Health Bar
             ctx.fillStyle = 'red';
-            ctx.fillRect(this.x - 10, this.y - 20, 20, 3);
+            ctx.fillRect(this.x - 12, this.y - (this.radius + 8), 24, 3);
             ctx.fillStyle = 'green';
-            ctx.fillRect(this.x - 10, this.y - 20, 20 * (this.hp / this.maxHp), 3);
+            ctx.fillRect(this.x - 12, this.y - (this.radius + 8), 24 * Math.max(0, (this.hp / this.maxHp)), 3);
         }
     }
 
     function spawnWave(waveNumber) {
-        const enemyCount = waveNumber * 5;
-        const enemyTypes = Object.keys(ENEMY_DICTIONARY).filter(type => type !== 'mudhorn');
+        const enemyCount = waveNumber * 4 + 2;
+        const enemyTypes = Object.keys(ENEMY_DICTIONARY);
 
         for (let i = 0; i < enemyCount; i++) {
-            const randomType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+            // Boss spawns every 5 waves
+            let typeKey = enemyTypes[Math.floor(Math.random() * (enemyTypes.length - 1))];
+            if (waveNumber % 5 === 0 && i === 0) {
+                typeKey = 'mudhorn';
+            }
             
             let spawnX, spawnY;
             const edge = Math.floor(Math.random() * 4);
-            
-            if (edge === 0) {
-                spawnX = Math.random() * canvas.width;
-                spawnY = 0;
-            } else if (edge === 1) {
-                spawnX = canvas.width;
-                spawnY = Math.random() * canvas.height;
-            } else if (edge === 2) {
-                spawnX = Math.random() * canvas.width;
-                spawnY = canvas.height;
-            } else {
-                spawnX = 0;
-                spawnY = Math.random() * canvas.height;
-            }
+            if (edge === 0) { spawnX = Math.random() * canvas.width; spawnY = -20; }
+            else if (edge === 1) { spawnX = canvas.width + 20; spawnY = Math.random() * canvas.height; }
+            else if (edge === 2) { spawnX = Math.random() * canvas.width; spawnY = canvas.height + 20; }
+            else { spawnX = -20; spawnY = Math.random() * canvas.height; }
 
-            ACTIVE_ENTITIES.enemies.push(new Enemy(randomType, spawnX, spawnY, waveNumber, i));
-
-            for (let p = 0; p < 6; p++) {
-                ACTIVE_ENTITIES.particles.push(new Particle(
-                    spawnX + (Math.random() * 10 - 5), 
-                    spawnY + (Math.random() * 10 - 5)
-                ));
-            }
+            ACTIVE_ENTITIES.enemies.push(new Enemy(typeKey, spawnX, spawnY, waveNumber, i));
         }
     }
 
     function checkCollisions() {
+        // Projectile vs Enemy
         for (let i = ACTIVE_ENTITIES.projectiles.length - 1; i >= 0; i--) {
             const p = ACTIVE_ENTITIES.projectiles[i];
             for (let j = ACTIVE_ENTITIES.enemies.length - 1; j >= 0; j--) {
@@ -381,13 +447,14 @@ window.VerdikaGame = (function() {
                     
                     if (e.hp <= 0) {
                         e.active = false;
-                        gameState.beskarScrap += 10; 
+                        gameState.beskarScrap += (e.type === 'mudhorn') ? 100 : 10; 
                     }
                     break; 
                 }
             }
         }
 
+        // Enemy vs Enemy (Separation push)
         for (let i = 0; i < ACTIVE_ENTITIES.enemies.length; i++) {
             for (let j = i + 1; j < ACTIVE_ENTITIES.enemies.length; j++) {
                 const e1 = ACTIVE_ENTITIES.enemies[i];
@@ -414,6 +481,7 @@ window.VerdikaGame = (function() {
         ACTIVE_ENTITIES.projectiles = ACTIVE_ENTITIES.projectiles.filter(p => p.active);
         ACTIVE_ENTITIES.enemies = ACTIVE_ENTITIES.enemies.filter(e => e.active);
 
+        // Player vs Enemy
         if (ACTIVE_ENTITIES.player) {
             const p = ACTIVE_ENTITIES.player;
             ACTIVE_ENTITIES.enemies.forEach(e => {
@@ -427,14 +495,12 @@ window.VerdikaGame = (function() {
 
                     const nx = dx / distance;
                     const ny = dy / distance;
-                    const pushBackStr = e.speed * 8; 
+                    e.x -= nx * (e.speed * 6);
+                    e.y -= ny * (e.speed * 6);
 
-                    e.x -= nx * pushBackStr;
-                    e.y -= ny * pushBackStr;
-
-                    if (e.type === 'krayt' || e.type === 'acolyte') {
+                    if (e.type === 'krayt') {
                         e.state = 'fleeing';
-                        e.stateTimer = 45; 
+                        e.stateTimer = 40; 
                     }
 
                     if (p.hp <= 0) {
@@ -448,6 +514,7 @@ window.VerdikaGame = (function() {
     function handleGameOver() {
         gameState.isRunning = false;
         document.getElementById('btn-pause').style.display = 'none'; 
+        document.getElementById('game-hud').style.display = 'none'; 
         document.getElementById('game-over').style.display = 'flex';
         document.getElementById('game-over-stats').innerText = `You reached Wave ${gameState.wave} and collected ${gameState.beskarScrap} Beskar Scrap.`;
         saveProgress();
@@ -463,11 +530,12 @@ window.VerdikaGame = (function() {
         inputState.isDragging = false;
     }
 
-    function gameLoop(timestamp) {
+    function gameLoop() {
         if (!gameState.isRunning) return;
         
         updateLogic();
         renderCanvas();
+        updateHUD();
         
         requestAnimationFrame(gameLoop);
     }
@@ -495,15 +563,16 @@ window.VerdikaGame = (function() {
         }
     }
 
+    function updateHUD() {
+        const waveElem = document.getElementById('hud-wave-val');
+        const scrapElem = document.getElementById('hud-scrap-val');
+        if (waveElem) waveElem.innerText = gameState.wave;
+        if (scrapElem) scrapElem.innerText = gameState.beskarScrap;
+    }
+
     function renderCanvas() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 20px sans-serif';
-        ctx.fillText(`Wave: ${gameState.wave}`, 10, 60);
-        ctx.fillStyle = '#ffd700';
-        ctx.fillText(`Scrap: ${gameState.beskarScrap}`, 10, 85);
-
         if (ACTIVE_ENTITIES.player) {
             ACTIVE_ENTITIES.player.render();
         }
@@ -521,7 +590,7 @@ window.VerdikaGame = (function() {
         try {
             localStorage.setItem('verdika_save_state', JSON.stringify(gameState));
         } catch (e) {
-            console.warn('OpSec: LocalStorage blocked by browser privacy settings. Progress not saved this session.');
+            console.warn('OpSec: LocalStorage blocked by browser privacy settings.');
         }
     }
 
@@ -545,6 +614,7 @@ window.VerdikaGame = (function() {
             document.getElementById('btn-start').addEventListener('click', () => {
                 document.getElementById('main-menu').style.display = 'none';
                 document.getElementById('btn-pause').style.display = 'inline-block'; 
+                document.getElementById('game-hud').style.display = 'flex'; 
                 
                 const selectedArchetype = document.getElementById('archetype-picker').value;
                 ACTIVE_ENTITIES.player = new Player(selectedArchetype);
@@ -559,6 +629,7 @@ window.VerdikaGame = (function() {
                 document.getElementById('game-over').style.display = 'none';
                 document.getElementById('main-menu').style.display = 'flex';
                 document.getElementById('btn-pause').style.display = 'none'; 
+                document.getElementById('game-hud').style.display = 'none'; 
                 resetGame();
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
             });
@@ -581,6 +652,7 @@ window.VerdikaGame = (function() {
                 document.getElementById('main-menu').style.display = 'flex';
                 document.getElementById('game-over').style.display = 'none';
                 document.getElementById('btn-pause').style.display = 'none'; 
+                document.getElementById('game-hud').style.display = 'none'; 
                 resetGame();
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
             });
@@ -611,4 +683,6 @@ window.VerdikaGame = (function() {
 document.addEventListener('DOMContentLoaded', () => {
     window.VerdikaGame.init();
 });
-                        
+                            }
+    }
+    
