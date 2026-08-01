@@ -339,6 +339,7 @@ const VerdikaGame = (function() {
 
     function handleGameOver() {
         gameState.isRunning = false;
+        document.getElementById('btn-pause').style.display = 'none'; // Hide in-game menu
         document.getElementById('game-over').style.display = 'flex';
         document.getElementById('game-over-stats').innerText = `You reached Wave ${gameState.wave} and collected ${gameState.beskarScrap} Beskar Scrap.`;
         saveProgress();
@@ -374,11 +375,25 @@ const VerdikaGame = (function() {
         ACTIVE_ENTITIES.projectiles.forEach(p => p.update());
 
         checkCollisions();
+
+        // Wave Progression Check
+        // System actively monitors the board. Saves progress natively for offline persistence at wave ends.
+        if (ACTIVE_ENTITIES.enemies.length === 0 && ACTIVE_ENTITIES.player && gameState.isRunning) {
+            gameState.wave++;
+            saveProgress(); 
+            spawnWave(gameState.wave);
+        }
     }
 
     function renderCanvas() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
+        // Push HUD down slightly so it isn't blocked by the new absolutely positioned header
+        ctx.fillStyle = '#fff';
+        ctx.font = '16px sans-serif';
+        ctx.fillText(`Wave: ${gameState.wave}`, 10, 60);
+        ctx.fillText(`Scrap: ${gameState.beskarScrap}`, 10, 80);
+
         if (ACTIVE_ENTITIES.player) {
             ACTIVE_ENTITIES.player.render();
         }
@@ -388,12 +403,6 @@ const VerdikaGame = (function() {
         });
 
         ACTIVE_ENTITIES.projectiles.forEach(p => p.render());
-
-        // Simple HUD
-        ctx.fillStyle = '#fff';
-        ctx.font = '16px sans-serif';
-        ctx.fillText(`Wave: ${gameState.wave}`, 10, 20);
-        ctx.fillText(`Scrap: ${gameState.beskarScrap}`, 10, 40);
     }
 
     function saveProgress() {
@@ -417,6 +426,7 @@ const VerdikaGame = (function() {
 
             document.getElementById('btn-start').addEventListener('click', () => {
                 document.getElementById('main-menu').style.display = 'none';
+                document.getElementById('btn-pause').style.display = 'inline-block'; // Reveal in-game menu
                 
                 const selectedArchetype = document.getElementById('archetype-picker').value;
                 ACTIVE_ENTITIES.player = new Player(selectedArchetype);
@@ -430,12 +440,13 @@ const VerdikaGame = (function() {
             document.getElementById('btn-restart').addEventListener('click', () => {
                 document.getElementById('game-over').style.display = 'none';
                 document.getElementById('main-menu').style.display = 'flex';
+                document.getElementById('btn-pause').style.display = 'none'; // Hide in-game menu
                 resetGame();
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
             });
 
             // --- CUSTOM EVENT LISTENERS ---
-            // Listens for events dispatched by utilities.js to handle pausing and quitting[span_10](start_span)[span_10](end_span)
+            // Listens for events dispatched by utilities.js to handle pausing and quitting
             window.addEventListener('verdikaPauseGame', () => {
                 gameState.isRunning = false; // Halts the requestAnimationFrame loop
             });
@@ -456,6 +467,7 @@ const VerdikaGame = (function() {
                 
                 document.getElementById('main-menu').style.display = 'flex';
                 document.getElementById('game-over').style.display = 'none';
+                document.getElementById('btn-pause').style.display = 'none'; // Hide in-game menu
                 
                 resetGame();
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -467,3 +479,4 @@ const VerdikaGame = (function() {
 document.addEventListener('DOMContentLoaded', () => {
     VerdikaGame.init();
 });
+                  
