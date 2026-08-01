@@ -1,4 +1,4 @@
-<!DOCTYPE html5>
+<!DOCTYPE html>
 <!--
 =============================================================================
 File: index.html
@@ -6,17 +6,18 @@ Project: Project_Verdika
 Description: Zero-dependency, offline-first HTML5 foundation for the game.
              Acts as the primary canvas container and utility layer host.
 Architecture Rules:
-  - Uses strict HTML5 standards for maximum device compatibility.
-  - Semantic structure separating utilities (<header>/<nav>) from the game (<main>)[span_1](start_span)[span_1](end_span).
-  - No "type" attributes on script or style tags per HTML5 guidelines[span_2](start_span)[span_2](end_span).
+  - Uses strict HTML5 standards per IBM Best Practices.
+  - UTF-8 charset is strictly the first element in <head> to optimize rendering.
+  - Semantic structure separating utilities (<header>/<nav>) from the game (<main>).
+  - No "type" attributes on script or style tags per HTML5 guidelines.
 Mandatory Update Points:
   - Any new global CSS variables or stylesheets must be linked in the <head> before scripts.
-  - Game canvas size/scaling updates should respect the meta viewport constraints.
+  - All input fields must use a matching <label> for accessibility.
 =============================================================================
 -->
-<html>
+<html lang="en">
 <head>
-    <!-- Character set MUST be the first element in the head for parsing speed[span_3](start_span)[span_3](end_span) -->
+    <!-- Character set MUST be the first element in the head for parsing speed -->
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
     <meta name="viewport" content="width=device-width, height=device-height">
@@ -30,13 +31,14 @@ Mandatory Update Points:
 </head>
 <body>
     <!-- MANDATORY UTILITIES LAYER -->
-    <!-- Utilizing semantic tags instead of generic divs for accessibility and structure[span_4](start_span)[span_4](end_span) -->
+    <!-- Utilizing semantic tags instead of generic divs for accessibility and structure -->
     <header>
         <nav>
             <button id="btn-help">Help</button>
             <div id="dropdown-about" style="display: none;" class="modal-panel">
                 <h3>Survival Guide</h3>
                 <p>Drag anywhere on the screen to move. Your Verd'ika will auto-fire at the nearest target.</p>
+                <button id="btn-threat-log" class="main-menu__button">Threat Assessment Log</button>
                 <hr>
                 <div id="health-gauges">
                     <!-- Version, backstory, health gauges render here -->
@@ -103,6 +105,16 @@ Mandatory Update Points:
             <p>Are you sure you want to quit? You will lose all Beskar Scrap gathered this wave.</p>
             <button id="btn-confirm-quit" class="main-menu__button main-menu__button--primary">Yes, Abandon</button>
             <button id="btn-cancel-quit" class="main-menu__button">No, Keep Fighting</button>
+        </dialog>
+
+        <!-- THREAT ASSESSMENT LOG MODAL -->
+        <dialog id="modal-threat-log" class="modal-panel modal-panel--large">
+            <h2>Threat Assessment Log</h2>
+            <div id="threat-list" class="threat-list">
+                <!-- Dynamically populated from game.js -->
+            </div>
+            <hr>
+            <button id="btn-close-threat-log" class="main-menu__button">Close Log</button>
         </dialog>
 
         <!-- GAME CANVAS -->
