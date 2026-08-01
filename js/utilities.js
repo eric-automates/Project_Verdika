@@ -3,13 +3,11 @@
  * File: utilities.js
  * Project: Project_Verdika
  * Description: Mandatory Utilities Layer containing the Help guide, About 
- *              dropdown, Settings Modals, real-time Health Gauges, and the Parking Lot backlog.
+ *              dropdown, Settings Modals, Health Gauges, and Threat Log renderer.
  * Architecture Rules:
- *   - Zero-Dependency: Pure Vanilla JavaScript, no external libraries[span_12](start_span)[span_12](end_span).
- *   - OpSec/Privacy: Gracefully handles LocalStorage security blocks common in privacy browsers[span_13](start_span)[span_13](end_span).
- *   - DOM Interaction: Hooks into the semantic HTML5 foundation without inline styles[span_14](start_span)[span_14](end_span).
- * Mandatory Update Points:
- *   - To add new gauges, append calculation methods to the HealthMonitor class.
+ *   - Zero-Dependency: Pure Vanilla JavaScript, no external libraries.
+ *   - OpSec/Privacy: Gracefully handles LocalStorage security blocks.
+ *   - DOM Interaction: Hooks into the semantic HTML5 foundation.
  * =============================================================================
  */
 
@@ -38,9 +36,6 @@ const VerdikaUtilities = (function() {
         elements.healthGaugesTarget = document.getElementById('health-gauges');
     }
 
-    /**
-     * Initializes the Help Button overlay.
-     */
     function initHelp() {
         elements.btnHelp.addEventListener('click', () => {
             const isHidden = elements.aboutDropdown.style.display === 'none';
@@ -56,8 +51,8 @@ const VerdikaUtilities = (function() {
     }
 
     /**
-     * Populates the Threat Assessment Log utilizing data straight from game.js
-     * Fix: Ensure we tap into window.VerdikaGame explicitly.
+     * Populates the Threat Assessment Log.
+     * Generates an exact SVG replica of the in-game canvas entity (Circle + Facing Visor Wedge + Healthbar).
      */
     function initThreatLog() {
         elements.btnThreatLog.addEventListener('click', () => {
@@ -70,12 +65,17 @@ const VerdikaUtilities = (function() {
                 const card = document.createElement('div');
                 card.className = 'threat-card';
                 
-                // SVG representation mimicking canvas render logic (circle + visor)
+                // SVG representation matching canvas render (Circle, 90deg visor wedge facing right, healthbar above)
                 const svgVisual = `
                 <div class="threat-card__visual">
-                    <svg width="60" height="60" viewBox="0 0 60 60">
-                        <circle cx="30" cy="30" r="${Math.min(data.radius * 1.5, 25)}" fill="${data.color}" />
-                        <path d="M 15 25 Q 30 40 45 25" stroke="rgba(255, 255, 255, 0.6)" stroke-width="4" fill="none" stroke-linecap="round"/>
+                    <svg width="65" height="65" viewBox="0 0 65 65">
+                        <!-- Overhead Health Bar -->
+                        <rect x="12.5" y="6" width="40" height="4" fill="red" rx="1"/>
+                        <rect x="12.5" y="6" width="40" height="4" fill="green" rx="1"/>
+                        <!-- Facing Visor Wedge (Semi-circle shadow highlight) -->
+                        <path d="M 32.5 35 L 50.5 22.5 A 18 18 0 0 1 50.5 47.5 Z" fill="rgba(255, 255, 255, 0.45)"/>
+                        <!-- Core Body -->
+                        <circle cx="32.5" cy="35" r="${Math.min(data.radius * 1.1, 16)}" fill="${data.color}" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
                     </svg>
                 </div>`;
 
@@ -93,7 +93,6 @@ const VerdikaUtilities = (function() {
             }
         });
 
-        // Use the close button OR clicking outside the modal (handled via standard dialog methods if desired)
         elements.btnCloseThreatLog.addEventListener('click', () => {
             elements.modalThreatLog.close();
         });
@@ -180,7 +179,7 @@ const VerdikaUtilities = (function() {
         updateGauges(fps, dom, mem) {
             if (elements.healthGaugesTarget) {
                 elements.healthGaugesTarget.innerHTML = `
-                    <p>Version: 1.0.4 | Offline-first survival roguelite.</p>
+                    <p>Version: 1.0.5 | Offline-first survival roguelite.</p>
                     <h4>Diagnostic Gauges</h4>
                     <p>FPS Engine: ${fps}%</p>
                     <p>DOM Bloat: ${dom}%</p>
@@ -194,7 +193,7 @@ const VerdikaUtilities = (function() {
         let notes = [
             'Implement Between-Wave Shop for Scrap Spending',
             'Determine Auto-pickup vs Looting Mini-game',
-            'Design AI Allies/Squad Companions'
+            'Design Holographic Comm-Puck Projection UI for Threat Log'
         ];
 
         try {
