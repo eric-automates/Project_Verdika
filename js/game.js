@@ -440,3 +440,4 @@ const VerdikaGame = (function() {
 document.addEventListener('DOMContentLoaded', () => {
     VerdikaGame.init();
 });
+    
