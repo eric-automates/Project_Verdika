@@ -30,10 +30,10 @@ const VerdikaGame = (function() {
      * Acts as the single source of truth for all game objects.
      */
     const ENEMY_DICTIONARY = {
-        'acolyte': { hp: 20, speed: 2, color: 'blue', type: 'horde' },
-        'krayt': { hp: 10, speed: 4, color: 'green', type: 'swarm' },
-        'mercenary': { hp: 50, speed: 1, color: 'gray', type: 'heavy' },
-        'mudhorn': { hp: 500, speed: 5, color: 'brown', type: 'boss', signetDrop: 'mudhorn_horn' }
+        'acolyte': { hp: 20, speed: 1.5, color: '#4682b4', type: 'horde', radius: 12 },
+        'krayt': { hp: 10, speed: 2.5, color: '#228b22', type: 'swarm', radius: 8 },
+        'mercenary': { hp: 50, speed: 0.8, color: '#696969', type: 'heavy', radius: 18 },
+        'mudhorn': { hp: 500, speed: 3.5, color: '#8b5a2b', type: 'boss', radius: 40, signetDrop: 'mudhorn_horn' }
     };
 
     const ACTIVE_ENTITIES = {
@@ -86,21 +86,18 @@ const VerdikaGame = (function() {
             this.armor = stats.baseArmor;
             this.speed = stats.speed;
             
-            // Start the player in the center of the canvas
             this.x = canvas.width / 2;
             this.y = canvas.height / 2;
-            this.radius = 15; // Visual size / collision boundary
-            this.color = 'var(--color-beskar-silver)'; 
+            this.radius = 15; 
+            this.color = '#c0c0c0'; // Beskar Silver
         }
 
         update() {
-            // Evaluates movement based on the inputState object without listening for events directly
             if (inputState.up) this.y -= this.speed;
             if (inputState.down) this.y += this.speed;
             if (inputState.left) this.x -= this.speed;
             if (inputState.right) this.x += this.speed;
             
-            // Constrain player strictly to the canvas bounds
             this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
             this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
         }
@@ -108,7 +105,47 @@ const VerdikaGame = (function() {
         render() {
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-            ctx.fillStyle = '#c0c0c0'; // Beskar Silver (fallback if CSS variable parsing via JS is bypassed)
+            ctx.fillStyle = this.color;
+            ctx.fill();
+            ctx.closePath();
+        }
+    }
+
+    /**
+     * --- ENEMY ENTITY CLASS ---
+     * Inherits stats from the ENEMY_DICTIONARY. Includes logic to track and pursue the player.
+     */
+    class Enemy {
+        constructor(typeKey, startX, startY) {
+            const stats = ENEMY_DICTIONARY[typeKey] || ENEMY_DICTIONARY['acolyte'];
+            this.type = typeKey;
+            this.hp = stats.hp;
+            this.speed = stats.speed;
+            this.radius = stats.radius;
+            this.color = stats.color;
+            this.x = startX;
+            this.y = startY;
+        }
+
+        update(player) {
+            if (!player) return;
+
+            // Calculate vector toward the player to facilitate tracking
+            const dx = player.x - this.x;
+            const dy = player.y - this.y;
+            const distance = Math.hypot(dx, dy);
+
+            // Normalize vector and apply speed to move enemy
+            if (distance > 0) {
+                this.x += (dx / distance) * this.speed;
+                this.y += (dy / distance) * this.speed;
+            }
+        }
+
+        render() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = this.color;
             ctx.fill();
             ctx.closePath();
         }
@@ -116,13 +153,28 @@ const VerdikaGame = (function() {
 
     /**
      * --- SPAWN MANAGER ---
-     * Handles wave generation and entity instantiation.
+     * Handles wave generation and entity instantiation slightly off-screen.
      */
     function spawnWave(waveNumber) {
-        // Example: Spawn enemies based on wave number
+        // Base enemy count scales with the wave number
         const enemyCount = waveNumber * 5;
+        const enemyTypes = Object.keys(ENEMY_DICTIONARY).filter(type => type !== 'mudhorn');
+
         for (let i = 0; i < enemyCount; i++) {
-            // Randomly pick an enemy type from the dictionary and push to ACTIVE_ENTITIES.enemies
+            // Pick a random horde/swarm enemy
+            const randomType = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+            
+            // Spawn randomly along the edges of the canvas
+            let spawnX, spawnY;
+            if (Math.random() < 0.5) {
+                spawnX = Math.random() < 0.5 ? -30 : canvas.width + 30;
+                spawnY = Math.random() * canvas.height;
+            } else {
+                spawnX = Math.random() * canvas.width;
+                spawnY = Math.random() < 0.5 ? -30 : canvas.height + 30;
+            }
+
+            ACTIVE_ENTITIES.enemies.push(new Enemy(randomType, spawnX, spawnY));
         }
     }
 
@@ -138,7 +190,6 @@ const VerdikaGame = (function() {
 
     /**
      * Main rendering and logic loop. 
-     * Uses native browser looping to preserve rendering stress limits.
      */
     function gameLoop(timestamp) {
         if (!gameState.isRunning) return;
@@ -156,6 +207,11 @@ const VerdikaGame = (function() {
         if (ACTIVE_ENTITIES.player) {
             ACTIVE_ENTITIES.player.update();
         }
+
+        ACTIVE_ENTITIES.enemies.forEach(enemy => {
+            enemy.update(ACTIVE_ENTITIES.player);
+        });
+
         checkCollisions();
     }
 
@@ -168,7 +224,10 @@ const VerdikaGame = (function() {
         if (ACTIVE_ENTITIES.player) {
             ACTIVE_ENTITIES.player.render();
         }
-        // Redraw environment and entities 
+
+        ACTIVE_ENTITIES.enemies.forEach(enemy => {
+            enemy.render();
+        });
     }
 
     /**
@@ -189,20 +248,19 @@ const VerdikaGame = (function() {
             canvas = document.getElementById('game-canvas');
             ctx = canvas.getContext('2d');
             
-            // Set initial canvas size and handle window resizing natively
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
             
             initInput();
 
-            // Hook main menu start button to trigger the raid
             document.getElementById('btn-start').addEventListener('click', () => {
-                // Hide the main menu
                 document.getElementById('main-menu').style.display = 'none';
                 
-                // Read archetype and instantiate player
                 const selectedArchetype = document.getElementById('archetype-picker').value;
                 ACTIVE_ENTITIES.player = new Player(selectedArchetype);
+
+                // Spawn the first wave immediately upon start
+                spawnWave(gameState.wave);
 
                 gameState.isRunning = true;
                 requestAnimationFrame(gameLoop);
@@ -211,7 +269,6 @@ const VerdikaGame = (function() {
     };
 })();
 
-// Initialize the game engine once the HTML structure is safe to modify.
 document.addEventListener('DOMContentLoaded', () => {
     VerdikaGame.init();
 });
