@@ -1,20 +1,18 @@
 /**
  * =============================================================================
- * File: game.js
+ * File: game.js (Part 1)
  * Project: Project_Verdika
  * Description: Core logic loop, object rendering, and combat resolution.
  * Architecture Rules:
- *   - Zero-Dependency: Uses requestAnimationFrame for native 60FPS looping.
- *   - OpSec/Privacy: Resilient against strict-browser storage blocking.
- *   - Modularity: Wraps all logic in an IIFE to prevent global namespace pollution.
+ *   - Zero-Dependency: Uses requestAnimationFrame for native 60FPS looping[span_15](start_span)[span_15](end_span).
+ *   - OpSec/Privacy: Resilient against strict-browser storage blocking[span_16](start_span)[span_16](end_span).
+ *   - Modularity: Wraps all logic in an IIFE, attached explicitly to window[span_17](start_span)[span_17](end_span).
  * Mandatory Update Points:
- *   - Any new enemy archetypes or boss signets MUST be added to the ENEMY_DICTIONARY.
- *   - Any new visual effects must be managed through the Particle class to ensure 
- *     proper memory garbage collection.
+ *   - Any new enemy archetypes MUST be added to the ENEMY_DICTIONARY[span_18](start_span)[span_18](end_span).
  * =============================================================================
  */
 
-const VerdikaGame = (function() {
+window.VerdikaGame = (function() {
     let canvas, ctx;
     
     let gameState = {
@@ -219,7 +217,6 @@ const VerdikaGame = (function() {
 
             ACTIVE_ENTITIES.enemies.forEach(enemy => {
                 const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
-                // Only shoot at enemies that are actively participating (not just spawning)
                 if (dist < minDistance && enemy.state !== 'spawning') {
                     minDistance = dist;
                     nearestEnemy = enemy;
@@ -245,12 +242,12 @@ const VerdikaGame = (function() {
             ctx.fillRect(this.x - 15, this.y - 25, 30 * (this.hp / this.maxHp), 5);
         }
     }
-
-    class Enemy {
+        class Enemy {
         constructor(typeKey, startX, startY, currentWave, indexId) {
             const stats = ENEMY_DICTIONARY[typeKey] || ENEMY_DICTIONARY['acolyte'];
             this.type = typeKey;
             
+            // Health Scaling per wave[span_19](start_span)[span_19](end_span)
             const healthScale = Math.pow(1.1, currentWave - 1);
             this.hp = Math.floor(stats.hp * healthScale);
             this.maxHp = this.hp;
@@ -263,12 +260,10 @@ const VerdikaGame = (function() {
             this.y = startY;
             this.active = true;
 
-            // AI State Machine Properties
             this.state = 'observing'; 
-            this.stateTimer = Math.floor(Math.random() * 60) + 30; // 0.5 to 1.5 seconds of thinking
-            this.angle = 0; // Facing direction
+            this.stateTimer = Math.floor(Math.random() * 60) + 30;
+            this.angle = 0; 
             
-            // Formation offsets (used by Roman Phalanx for heavy troops)
             this.formationOffsetX = (indexId % 5) * 40 - 80;
             this.formationOffsetY = Math.floor(indexId / 5) * 40 - 80;
         }
@@ -281,9 +276,7 @@ const VerdikaGame = (function() {
             const distanceToPlayer = Math.hypot(dx, dy);
             const directAngleToPlayer = Math.atan2(dy, dx);
 
-            // AI STATE MACHINE
             if (this.state === 'observing') {
-                // Enemy stops, looks around, locking onto player
                 this.angle = directAngleToPlayer;
                 this.stateTimer--;
                 if (this.stateTimer <= 0) {
@@ -293,27 +286,22 @@ const VerdikaGame = (function() {
             else if (this.state === 'moving') {
                 let targetAngle = directAngleToPlayer;
 
-                // Formations based on archetype
                 if (this.type === 'mercenary') {
-                    // Roman Phalanx: Move to a specific grid point relative to the player
                     const formationTargetX = player.x + Math.cos(directAngleToPlayer) * 150 + this.formationOffsetX;
                     const formationTargetY = player.y + Math.sin(directAngleToPlayer) * 150 + this.formationOffsetY;
                     targetAngle = Math.atan2(formationTargetY - this.y, formationTargetX - this.x);
                 } 
                 else if (this.type === 'krayt' && distanceToPlayer < 100) {
-                    // Swarm hit and run: erratic approach
                     targetAngle += (Math.random() - 0.5) * 1.5; 
                 }
 
-                // Smooth rotation towards target angle
                 this.angle = targetAngle;
                 this.x += Math.cos(this.angle) * this.speed;
                 this.y += Math.sin(this.angle) * this.speed;
             }
             else if (this.state === 'fleeing') {
-                // Hit and Run retreat
-                this.angle = directAngleToPlayer + Math.PI; // Face away
-                this.x += Math.cos(this.angle) * (this.speed * 1.5); // Sprint away
+                this.angle = directAngleToPlayer + Math.PI; 
+                this.x += Math.cos(this.angle) * (this.speed * 1.5); 
                 this.y += Math.sin(this.angle) * (this.speed * 1.5);
                 
                 this.stateTimer--;
@@ -325,22 +313,19 @@ const VerdikaGame = (function() {
         }
 
         render() {
-            // Draw Visor / Facing Indicator (Semi-circle shadow)
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.radius + 2, this.angle - Math.PI/4, this.angle + Math.PI/4);
             ctx.lineTo(this.x, this.y);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; // Visor highlight
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; 
             ctx.fill();
             ctx.closePath();
 
-            // Draw Base Body
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
             ctx.fillStyle = this.color;
             ctx.fill();
             ctx.closePath();
             
-            // Health bar
             ctx.fillStyle = 'red';
             ctx.fillRect(this.x - 10, this.y - 20, 20, 3);
             ctx.fillStyle = 'green';
@@ -447,10 +432,9 @@ const VerdikaGame = (function() {
                     e.x -= nx * pushBackStr;
                     e.y -= ny * pushBackStr;
 
-                    // AI Hit and Run reaction
                     if (e.type === 'krayt' || e.type === 'acolyte') {
                         e.state = 'fleeing';
-                        e.stateTimer = 45; // Flee for roughly 0.75 seconds
+                        e.stateTimer = 45; 
                     }
 
                     if (p.hp <= 0) {
@@ -515,9 +499,10 @@ const VerdikaGame = (function() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
         ctx.fillStyle = '#fff';
-        ctx.font = '16px sans-serif';
+        ctx.font = 'bold 20px sans-serif';
         ctx.fillText(`Wave: ${gameState.wave}`, 10, 60);
-        ctx.fillText(`Scrap: ${gameState.beskarScrap}`, 10, 80);
+        ctx.fillStyle = '#ffd700';
+        ctx.fillText(`Scrap: ${gameState.beskarScrap}`, 10, 85);
 
         if (ACTIVE_ENTITIES.player) {
             ACTIVE_ENTITIES.player.render();
@@ -545,7 +530,6 @@ const VerdikaGame = (function() {
         canvas.height = window.innerHeight;
     }
 
-    // Tracks if the game was running before the Help menu opened to ensure smooth pausing/resuming
     let wasRunningBeforeHelp = false;
 
     return {
@@ -601,11 +585,10 @@ const VerdikaGame = (function() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
             });
 
-            // Help Pause Hooks
             window.addEventListener('verdikaHelpOpened', () => {
                 if (ACTIVE_ENTITIES.player && gameState.isRunning) {
                     wasRunningBeforeHelp = true;
-                    gameState.isRunning = false; // Halt loop
+                    gameState.isRunning = false; 
                 }
             });
 
@@ -619,7 +602,6 @@ const VerdikaGame = (function() {
             });
         },
         
-        // Expose centralized data source for Utilities layer 
         getEnemyDictionary: function() {
             return ENEMY_DICTIONARY;
         }
@@ -627,5 +609,6 @@ const VerdikaGame = (function() {
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
-    VerdikaGame.init();
+    window.VerdikaGame.init();
 });
+                        
