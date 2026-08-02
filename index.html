@@ -6,13 +6,13 @@ Project: Project_Verdika
 Description: Zero-dependency, offline-first HTML5 foundation for the game.
              Acts as the primary canvas container and utility layer host.
 Architecture Rules:
-  - Uses strict HTML5 standards per IBM Best Practices.
-  - UTF-8 charset is strictly the first element in <head> to optimize rendering.
-  - Semantic structure separating utilities (<header>/<nav>) from the game (<main>).
-  - No "type" attributes on script or style tags per HTML5 guidelines.
+  - Uses strict HTML5 standards per IBM Best Practices[span_5](start_span)[span_5](end_span).
+  - UTF-8 charset is strictly the first element in <head> to optimize rendering[span_6](start_span)[span_6](end_span)[span_7](start_span)[span_7](end_span).
+  - Semantic structure separating utilities (<header>/<nav>) from the game (<main>)[span_8](start_span)[span_8](end_span).
+  - No "type" attributes on script or style tags per HTML5 guidelines[span_9](start_span)[span_9](end_span)[span_10](start_span)[span_10](end_span).
 Mandatory Update Points:
   - Any new global CSS variables or stylesheets must be linked in the <head> before scripts.
-  - All input fields must use a matching <label> for accessibility.
+  - All input fields must use a matching <label> for accessibility[span_11](start_span)[span_11](end_span).
 =============================================================================
 -->
 <html lang="en">
@@ -98,6 +98,20 @@ Mandatory Update Points:
             <button id="btn-restart" class="main-menu__button main-menu__button--primary">Return to Menu</button>
         </section>
 
+        <!-- BETWEEN-WAVE SHOP MODAL -->
+        <dialog id="modal-shop" class="modal-panel glass-panel">
+            <h2>The Foundry</h2>
+            <p>Forge your equipment before the next wave.</p>
+            <p>Available Beskar: <span id="shop-beskar-val" class="hud-value--gold">0</span></p>
+            <div class="shop-items">
+                <button id="btn-buy-hp" class="main-menu__button shop-btn" data-type="hp" data-cost="50">Reinforce Armor (+20 HP) - 50 Beskar</button>
+                <button id="btn-buy-speed" class="main-menu__button shop-btn" data-type="speed" data-cost="75">Tune Servos (+10% Speed) - 75 Beskar</button>
+                <button id="btn-buy-dmg" class="main-menu__button shop-btn" data-type="damage" data-cost="100">Overcharge Blaster (+2 Dmg) - 100 Beskar</button>
+            </div>
+            <hr>
+            <button id="btn-close-shop" class="main-menu__button main-menu__button--primary">Deploy to Next Wave</button>
+        </dialog>
+
         <!-- SETTINGS / PAUSE MODAL -->
         <dialog id="modal-settings" class="modal-panel glass-panel">
             <h2>Settings</h2>
@@ -142,4 +156,5 @@ Mandatory Update Points:
         
     </main>
 </body>
-</html>
+                                                           </html>
+                                                             
