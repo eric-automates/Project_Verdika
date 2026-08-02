@@ -5,9 +5,9 @@
  * Description: Mandatory Utilities Layer containing the Help guide, About 
  *              dropdown, Settings Modals, Health Gauges, and Threat Log renderer.
  * Architecture Rules:
- *   - Zero-Dependency: Pure Vanilla JavaScript, no external libraries[span_12](start_span)[span_12](end_span).
- *   - OpSec/Privacy: Gracefully handles LocalStorage security blocks[span_13](start_span)[span_13](end_span).
- *   - DOM Interaction: Hooks into the semantic HTML5 foundation[span_14](start_span)[span_14](end_span).
+ *   - Zero-Dependency: Pure Vanilla JavaScript, no external libraries.
+ *   - OpSec/Privacy: Gracefully handles LocalStorage security blocks.
+ *   - DOM Interaction: Hooks into the semantic HTML5 foundation.
  * =============================================================================
  */
 
@@ -96,7 +96,6 @@ const VerdikaUtilities = (function() {
         });
     }
 
-    // Decouples DOM button clicks from internal game logic by dispatching custom events
     function initShop() {
         elements.shopBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -115,7 +114,6 @@ const VerdikaUtilities = (function() {
             window.dispatchEvent(new Event('verdikaCloseShop'));
         });
 
-        // Listen for game state updates to refresh the UI ledger
         window.addEventListener('verdikaUpdateShopUI', (e) => {
             if (e.detail && e.detail.beskar !== undefined) {
                 elements.shopBeskarVal.innerText = e.detail.beskar;
@@ -208,7 +206,7 @@ const VerdikaUtilities = (function() {
         updateGauges(fps, dom, mem) {
             if (elements.healthGaugesTarget) {
                 elements.healthGaugesTarget.innerHTML = `
-                    <p>Version: 1.1.0 | Offline-first survival roguelite.</p>
+                    <p>Version: 1.1.5 | Offline-first survival roguelite.</p>
                     <h4>Diagnostic Gauges</h4>
                     <p>FPS Engine: ${fps}%</p>
                     <p>DOM Bloat: ${dom}%</p>
@@ -220,7 +218,6 @@ const VerdikaUtilities = (function() {
 
     function initParkingLot() {
         let notes = [
-            'Determine Auto-pickup vs Looting Mini-game',
             'Design Holographic Comm-Puck Projection UI for Threat Log'
         ];
 
@@ -258,4 +255,3 @@ const VerdikaUtilities = (function() {
 document.addEventListener('DOMContentLoaded', () => {
     VerdikaUtilities.init();
 });
-        
