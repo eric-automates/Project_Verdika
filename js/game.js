@@ -4,11 +4,11 @@
  * Project: Project_Verdika
  * Description: Core logic loop, object rendering, and player/particle models.
  * Architecture Rules:
- *   - Zero-Dependency: Uses requestAnimationFrame for native 60FPS looping.
- *   - OpSec/Privacy: Resilient against strict-browser storage blocking.
- *   - Modularity: Wraps all logic in an IIFE, attached explicitly to window.
+ *   - Zero-Dependency: Uses requestAnimationFrame for native 60FPS looping[span_15](start_span)[span_15](end_span).
+ *   - OpSec/Privacy: Resilient against strict-browser storage blocking[span_16](start_span)[span_16](end_span).
+ *   - Modularity: Wraps all logic in an IIFE, attached explicitly to window[span_17](start_span)[span_17](end_span).
  * Mandatory Update Points:
- *   - Any new enemy archetypes MUST be added to the ENEMY_DICTIONARY.
+ *   - Any new enemy archetypes MUST be added to the ENEMY_DICTIONARY[span_18](start_span)[span_18](end_span).
  * =============================================================================
  */
 
@@ -18,6 +18,7 @@ window.VerdikaGame = (function() {
     // Core game state tracking
     let gameState = {
         isRunning: false,
+        isShopping: false,
         wave: 1,
         beskarScrap: 0,
         activeSignet: null 
@@ -75,7 +76,7 @@ window.VerdikaGame = (function() {
     }
 
     function handlePointerDown(e) {
-        if (!gameState.isRunning) return;
+        if (!gameState.isRunning || gameState.isShopping) return;
         e.preventDefault(); 
         inputState.isDragging = true;
         const pos = getPointerPos(e);
@@ -87,7 +88,7 @@ window.VerdikaGame = (function() {
     }
 
     function handlePointerMove(e) {
-        if (!inputState.isDragging || !gameState.isRunning) return;
+        if (!inputState.isDragging || !gameState.isRunning || gameState.isShopping) return;
         e.preventDefault();
         const pos = getPointerPos(e);
         inputState.currentX = pos.x;
@@ -183,6 +184,7 @@ window.VerdikaGame = (function() {
             this.maxHp = stats.baseHp;
             this.armor = stats.baseArmor;
             this.maxSpeed = stats.speed; 
+            this.damageMod = 0; // Accumulated via shop
             
             this.x = canvas.width / 2;
             this.y = canvas.height / 2;
@@ -233,7 +235,8 @@ window.VerdikaGame = (function() {
             });
 
             if (nearestEnemy) {
-                ACTIVE_ENTITIES.projectiles.push(new Projectile(this.x, this.y, nearestEnemy.x, nearestEnemy.y, 9, 10));
+                const totalDamage = 10 + this.damageMod;
+                ACTIVE_ENTITIES.projectiles.push(new Projectile(this.x, this.y, nearestEnemy.x, nearestEnemy.y, 9, totalDamage));
                 this.lastShotTime = Date.now();
             }
         }
@@ -250,8 +253,8 @@ window.VerdikaGame = (function() {
             ctx.fillStyle = 'green';
             ctx.fillRect(this.x - 15, this.y - 24, 30 * Math.max(0, (this.hp / this.maxHp)), 4);
         }
-            }
-             class Enemy {
+                    }
+                         class Enemy {
         constructor(typeKey, startX, startY, currentWave, indexId) {
             const stats = ENEMY_DICTIONARY[typeKey] || ENEMY_DICTIONARY['acolyte'];
             this.type = typeKey;
@@ -269,10 +272,9 @@ window.VerdikaGame = (function() {
             this.y = startY;
             this.active = true;
 
-            // Stealth & Awareness Properties
             this.isAware = false;
             this.viewingDistance = this.radius * 10; 
-            this.fov = Math.PI / 2; // 90 degree arc
+            this.fov = Math.PI / 2; 
             this.patrolTimer = Math.floor(Math.random() * 60);
 
             this.state = 'observing'; 
@@ -297,9 +299,7 @@ window.VerdikaGame = (function() {
             const wanderAngle = Math.sin(this.ticks * 0.05 + this.randomSeed) * 0.4;
             let targetAngle = directAngleToPlayer + wanderAngle;
 
-            // --- AWARENESS & STEALTH LOGIC ---
             if (!this.isAware) {
-                // 1. Direct Vision Check
                 let angleDiff = Math.abs(directAngleToPlayer - this.angle);
                 while (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
 
@@ -307,7 +307,6 @@ window.VerdikaGame = (function() {
                     this.isAware = true;
                 }
 
-                // 2. Cascade Vision Check (Look for aware friends)
                 if (!this.isAware) {
                     let friendSpotted = false;
                     let friendTargetAngle = this.angle;
@@ -332,26 +331,23 @@ window.VerdikaGame = (function() {
                     }
 
                     if (friendSpotted) {
-                        // Slowly pan the viewing arc towards where the friend is attacking
                         let diff = friendTargetAngle - this.angle;
                         while (diff < -Math.PI) diff += Math.PI * 2;
                         while (diff > Math.PI) diff -= Math.PI * 2;
                         this.angle += Math.max(-0.015, Math.min(0.015, diff));
                     } else {
-                        // Patrol Behavior
                         this.patrolTimer--;
                         if (this.patrolTimer <= 0) {
-                            this.angle += Math.PI + (Math.random() * 0.5 - 0.25); // Turn around
+                            this.angle += Math.PI + (Math.random() * 0.5 - 0.25); 
                             this.patrolTimer = 120 + Math.floor(Math.random() * 60);
                         }
-                        this.speed = this.baseSpeed * 0.3; // Move slow when unaware
+                        this.speed = this.baseSpeed * 0.3; 
                         this.x += Math.cos(this.angle) * this.speed;
                         this.y += Math.sin(this.angle) * this.speed;
                     }
                 }
             }
 
-            // --- ARCHETYPE-SPECIFIC AI BEHAVIORS (Only run if Aware) ---
             if (this.isAware) {
                 if (this.type === 'strill') {
                     this.state = 'moving';
@@ -435,8 +431,8 @@ window.VerdikaGame = (function() {
                         this.y += Math.sin(this.angle) * 6.5;
                         if (this.ticks % 2 === 0) {
                             ACTIVE_ENTITIES.particles.push(new Particle(this.x, this.y, 'rgba(139, 90, 43, '));
-                }
-                this.stateTimer--;
+                        }
+                        this.stateTimer--;
                         if (this.stateTimer <= 0 || this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
                             this.state = 'exhausted';
                             this.stateTimer = 50; 
@@ -465,7 +461,6 @@ window.VerdikaGame = (function() {
                 }
             }
 
-            // Universal boundary clamping and bouncing (keeps patrols on screen)
             if (this.x <= this.radius || this.x >= canvas.width - this.radius ||
                 this.y <= this.radius || this.y >= canvas.height - this.radius) {
                 this.angle += Math.PI; 
@@ -475,7 +470,6 @@ window.VerdikaGame = (function() {
         }
 
         render() {
-            // Render Viewing Arc based on Awareness State
             ctx.beginPath();
             ctx.moveTo(this.x, this.y);
             ctx.arc(this.x, this.y, this.viewingDistance, this.angle - this.fov/2, this.angle + this.fov/2);
@@ -484,14 +478,12 @@ window.VerdikaGame = (function() {
             ctx.fill();
             ctx.closePath();
 
-            // Render Entity
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
             ctx.fillStyle = this.color;
             ctx.fill();
             ctx.closePath();
             
-            // Render Health Bar
             ctx.fillStyle = 'red';
             ctx.fillRect(this.x - 12, this.y - (this.radius + 8), 24, 3);
             ctx.fillStyle = 'green';
@@ -529,7 +521,7 @@ window.VerdikaGame = (function() {
                 
                 if (dist < p.radius + e.radius) {
                     e.hp -= p.damage;
-                    e.isAware = true; // Force awareness on hit
+                    e.isAware = true; 
                     p.active = false;
                     
                     if (e.hp <= 0) {
@@ -577,7 +569,7 @@ window.VerdikaGame = (function() {
 
                 if (distance < minDistance) {
                     p.hp -= e.damage * 0.05; 
-                    e.isAware = true; // Wake up enemy if player bumps them
+                    e.isAware = true; 
 
                     const nx = dx / distance;
                     const ny = dy / distance;
@@ -616,10 +608,21 @@ window.VerdikaGame = (function() {
         inputState.isDragging = false;
     }
 
+    function triggerShopPhase() {
+        gameState.isShopping = true;
+        inputState.isDragging = false;
+        
+        window.dispatchEvent(new CustomEvent('verdikaUpdateShopUI', { detail: { beskar: gameState.beskarScrap } }));
+        window.dispatchEvent(new Event('verdikaOpenShop'));
+    }
+
     function gameLoop() {
         if (!gameState.isRunning) return;
         
-        updateLogic();
+        if (!gameState.isShopping) {
+            updateLogic();
+        }
+        
         renderCanvas();
         updateHUD();
         
@@ -642,10 +645,9 @@ window.VerdikaGame = (function() {
 
         checkCollisions();
 
-        if (ACTIVE_ENTITIES.enemies.length === 0 && ACTIVE_ENTITIES.player && gameState.isRunning) {
-            gameState.wave++;
+        if (ACTIVE_ENTITIES.enemies.length === 0 && ACTIVE_ENTITIES.player && gameState.isRunning && !gameState.isShopping) {
             saveProgress(); 
-            spawnWave(gameState.wave);
+            triggerShopPhase();
         }
     }
 
@@ -720,6 +722,31 @@ window.VerdikaGame = (function() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
             });
 
+            window.addEventListener('verdikaBuyUpgrade', (e) => {
+                const { type, cost } = e.detail;
+                if (gameState.beskarScrap >= cost && ACTIVE_ENTITIES.player) {
+                    gameState.beskarScrap -= cost;
+                    const p = ACTIVE_ENTITIES.player;
+                                        
+                    if (type === 'hp') {
+                        p.maxHp += 20;
+                        p.hp += 20;
+                    } else if (type === 'speed') {
+                        p.maxSpeed *= 1.10;
+                    } else if (type === 'damage') {
+                        p.damageMod += 2;
+                    }
+                    
+                    window.dispatchEvent(new CustomEvent('verdikaUpdateShopUI', { detail: { beskar: gameState.beskarScrap } }));
+                }
+            });
+
+            window.addEventListener('verdikaCloseShop', () => {
+                gameState.isShopping = false;
+                gameState.wave++;
+                spawnWave(gameState.wave);
+            });
+
             window.addEventListener('verdikaPauseGame', () => {
                 gameState.isRunning = false; 
             });
@@ -768,4 +795,5 @@ window.VerdikaGame = (function() {
 
 document.addEventListener('DOMContentLoaded', () => {
     window.VerdikaGame.init();
-});        
+});
+      
