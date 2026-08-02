@@ -6,6 +6,7 @@
  * Architecture Rules:
  *   - Zero-Dependency: Native requestAnimationFrame 60FPS loop.
  *   - Modularity: Wraps all logic in an IIFE, attached explicitly to window.
+ *   - OpSec/Privacy: Resilient against strict-browser storage blocking. Prioritizes local variables over DOM memory.
  * =============================================================================
  */
 
@@ -16,6 +17,7 @@ window.VerdikaGame = (function() {
         isRunning: false,
         isShopping: false,
         isMarket: false,
+        waveCleared: false, // Tracks manual transition state
         wave: 1,
         beskarScrap: 0
     };
@@ -30,20 +32,20 @@ window.VerdikaGame = (function() {
     };
 
     const MARKET_DICTIONARY = [
-        { id: 'w_heavy', name: 'Heavy Repeater', desc: 'Increases fire rate drastically.', cost: 150, type: 'weapon' },
-        { id: 'w_scatter', name: 'Scattergun', desc: 'Fires 3 projectiles in a spread.', cost: 200, type: 'weapon' },
-        { id: 'w_sniper', name: 'Sniper Rifle', desc: 'Massive damage (+20), slower fire.', cost: 180, type: 'weapon' },
-        { id: 'w_carbine', name: 'Blaster Carbine', desc: 'Projectiles travel twice as fast.', cost: 120, type: 'weapon' },
-        { id: 'w_plasma', name: 'Plasma Cannon', desc: 'Base damage +10.', cost: 100, type: 'weapon' },
-        { id: 'a_pauldrons', name: 'Beskar Pauldrons', desc: '+50 Max HP.', cost: 150, type: 'armor' },
-        { id: 'a_plating', name: 'Durasteel Plating', desc: 'Damage resistance +2.', cost: 120, type: 'armor' },
-        { id: 'a_reflec', name: 'Reflec Coating', desc: '+20% Movement Speed.', cost: 100, type: 'armor' },
-        { id: 'a_shield', name: 'Energy Shield', desc: 'Regenerates 1 HP per second.', cost: 250, type: 'armor' },
+        { id: 'w_heavy', name: 'Heavy Repeater', desc: 'Increases fire rate drastically. Stackable.', cost: 150, type: 'weapon' },
+        { id: 'w_scatter', name: 'Scattergun', desc: 'Fires projectiles in a spread. Duplicates add +2 spread.', cost: 200, type: 'weapon' },
+        { id: 'w_sniper', name: 'Sniper Rifle', desc: 'Massive damage, fast projectile. Stackable dmg.', cost: 180, type: 'weapon' },
+        { id: 'w_carbine', name: 'Blaster Carbine', desc: 'Projectiles travel faster. Stackable speed.', cost: 120, type: 'weapon' },
+        { id: 'w_plasma', name: 'Plasma Cannon', desc: 'Base damage +10. Stackable.', cost: 100, type: 'weapon' },
+        { id: 'a_pauldrons', name: 'Beskar Pauldrons', desc: '+50 Max HP. Stackable.', cost: 150, type: 'armor' },
+        { id: 'a_plating', name: 'Durasteel Plating', desc: 'Damage resistance +2. Stackable.', cost: 120, type: 'armor' },
+        { id: 'a_reflec', name: 'Reflec Coating', desc: '+20% Movement Speed. Stackable.', cost: 100, type: 'armor' },
+        { id: 'a_shield', name: 'Energy Shield', desc: 'Regenerates 1 HP per second. Stackable.', cost: 250, type: 'armor' },
         { id: 'a_cortosis', name: 'Cortosis Weave', desc: 'Melee attackers take 5 damage.', cost: 180, type: 'armor' },
         { id: 'i_carbonite', name: 'Carbonite Grenade', desc: 'Auto-freezes all enemies every 15s.', cost: 150, type: 'item' },
         { id: 'i_bacta', name: 'Bacta Infusion', desc: 'Instantly heals to 100% HP.', cost: 80, type: 'item' },
         { id: 'i_magnet', name: 'Beskar Magnet', desc: 'Triples loot pickup radius.', cost: 150, type: 'item' },
-        { id: 'i_optics', name: 'Targeting Optics', desc: 'Projectiles last twice as long.', cost: 100, type: 'item' },
+        { id: 'i_optics', name: 'Targeting Optics', desc: 'Projectiles last twice as long. Stackable.', cost: 100, type: 'item' },
         { id: 'i_stim', name: 'Overdrive Stim', desc: 'Double speed & fire rate for first 10s of wave.', cost: 120, type: 'item' }
     ];
 
@@ -100,28 +102,47 @@ window.VerdikaGame = (function() {
     }
 
     class Projectile {
-        constructor(x, y, targetX, targetY, speed, damage, life = 1.0) {
+        constructor(x, y, targetX, targetY, speed, damage, life = 1.0, colorStr = 'rgba(255, 215, 0,') {
             this.x = x; this.y = y; this.speed = speed; this.damage = damage;
-            this.radius = 3.5; this.color = '#ffd700'; this.active = true;
+            this.radius = 3.5; this.color = colorStr; this.active = true;
             const dist = Math.hypot(targetX - x, targetY - y);
             this.vx = (targetX - x) / dist * this.speed;
             this.vy = (targetY - y) / dist * this.speed;
-            this.lifeSpan = 150 * life; // optics item changes this
+            this.lifeSpan = 150 * life; // optics item scales this
         }
         update() {
             this.x += this.vx; this.y += this.vy; this.lifeSpan--;
+            // Emit weapon-specific particles organically along trajectory
+            if (Math.random() > 0.4) {
+                ACTIVE_ENTITIES.particles.push(new Particle(this.x, this.y, this.color));
+            }
             if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height || this.lifeSpan <= 0) this.active = false;
         }
         render() {
             ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-            ctx.fillStyle = this.color; ctx.fill(); ctx.closePath();
+            ctx.fillStyle = this.color + ' 1.0)'; ctx.fill(); ctx.closePath();
         }
-    }
-   /**
+            }
+    /**
  * =============================================================================
  * File: game.js (Part 2 of 3)
  * =============================================================================
  */
+    class Particle {
+        constructor(x, y, colorStr = 'rgba(169, 169, 169, ') {
+            this.x = x; this.y = y;
+            this.radius = Math.random() * 4 + 2; 
+            this.life = 1.0; 
+            this.decay = Math.random() * 0.05 + 0.03; 
+            this.color = colorStr; 
+        }
+        update() { this.life -= this.decay; this.radius += 0.2; }
+        render() {
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = this.color + `${this.life})`; ctx.fill(); ctx.closePath();
+        }
+    }
+
     class Loot {
         constructor(x, y, amount) {
             this.x = x; this.y = y; this.amount = amount;
@@ -131,6 +152,8 @@ window.VerdikaGame = (function() {
         render() {
             ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
             ctx.fillStyle = this.color; ctx.fill(); ctx.closePath();
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.radius * 0.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.closePath();
         }
     }
 
@@ -141,6 +164,7 @@ window.VerdikaGame = (function() {
             this.maxSpeed = this.baseSpeed = stats.speed; 
             this.damageMod = 0; this.fireRate = 450; this.projSpeed = 9;
             this.weaponType = 'blaster'; this.armorMod = 0; this.healthRegen = 0;
+            this.scatterCount = 3; // base for scatter weapon
             this.cortosis = false; this.carbonite = false; this.magnet = false;
             this.optics = 1.0; this.stim = false;
             
@@ -153,12 +177,9 @@ window.VerdikaGame = (function() {
             this.ticks++;
             if (inputState.isDragging && Date.now() - inputState.lastTime > 500) inputState.isDragging = false;
 
-            // Stim Logic (First 10s of wave)
             let currentSpeed = this.maxSpeed;
             let currentFireRate = this.fireRate;
-            if (this.stim && this.ticks < 600) {
-                currentSpeed *= 1.5; currentFireRate *= 0.5;
-            }
+            if (this.stim && this.ticks < 600) { currentSpeed *= 1.5; currentFireRate *= 0.5; }
 
             if (inputState.isDragging) {
                 const dx = inputState.currentX - inputState.dragStartX;
@@ -175,7 +196,6 @@ window.VerdikaGame = (function() {
 
             if (this.healthRegen > 0 && this.ticks % 60 === 0) this.hp = Math.min(this.maxHp, this.hp + this.healthRegen);
 
-            // Carbonite grenade auto-freeze every 15s (900 ticks)
             if (this.carbonite && this.ticks % 900 === 0 && ACTIVE_ENTITIES.enemies.length > 0) {
                 ACTIVE_ENTITIES.enemies.forEach(e => e.frozenTimer = 180);
             }
@@ -192,14 +212,23 @@ window.VerdikaGame = (function() {
 
             if (nearest) {
                 const dmg = 10 + this.damageMod;
+                // Core RGBA mapping for specific weapon traits
+                let pColor = 'rgba(255, 215, 0,'; 
+                if (this.weaponType === 'plasma') pColor = 'rgba(0, 255, 255,';
+                if (this.weaponType === 'sniper') pColor = 'rgba(255, 255, 255,';
+                if (this.weaponType === 'heavy') pColor = 'rgba(255, 0, 0,';
+                if (this.weaponType === 'carbine') pColor = 'rgba(0, 255, 0,';
+                if (this.weaponType === 'scatter') pColor = 'rgba(255, 140, 0,';
+
                 if (this.weaponType === 'scatter') {
-                    // Spread math
-                    for(let i = -1; i <= 1; i++) {
-                        const targetX = nearest.x + (i * 40); const targetY = nearest.y + (i * 40);
-                        ACTIVE_ENTITIES.projectiles.push(new Projectile(this.x, this.y, targetX, targetY, this.projSpeed, dmg, this.optics));
+                    // Spread logic dynamically scales based on stack count
+                    const offsetStart = Math.floor(this.scatterCount / 2);
+                    for(let i = -offsetStart; i <= offsetStart; i++) {
+                        const targetX = nearest.x + (i * 35); const targetY = nearest.y + (i * 35);
+                        ACTIVE_ENTITIES.projectiles.push(new Projectile(this.x, this.y, targetX, targetY, this.projSpeed, dmg, this.optics, pColor));
                     }
                 } else {
-                    ACTIVE_ENTITIES.projectiles.push(new Projectile(this.x, this.y, nearest.x, nearest.y, this.projSpeed, dmg, this.optics));
+                    ACTIVE_ENTITIES.projectiles.push(new Projectile(this.x, this.y, nearest.x, nearest.y, this.projSpeed, dmg, this.optics, pColor));
                 }
                 this.lastShotTime = Date.now();
             }
@@ -220,13 +249,11 @@ window.VerdikaGame = (function() {
             this.hp = this.maxHp = Math.floor(stats.hp * Math.pow(1.10, currentWave - 1));
             this.speed = stats.speed; this.radius = stats.radius; this.damage = stats.damage;
             this.color = stats.color; this.x = startX; this.y = startY; this.active = true;
-            this.frozenTimer = 0; // Carbonite status
+            this.frozenTimer = 0; 
         }
         update(player) {
             if (!player) return;
-            if (this.frozenTimer > 0) {
-                this.frozenTimer--; return; 
-            }
+            if (this.frozenTimer > 0) { this.frozenTimer--; return; }
             const dx = player.x - this.x; const dy = player.y - this.y;
             const dist = Math.hypot(dx, dy);
             this.x += (dx / dist) * this.speed;
@@ -237,14 +264,15 @@ window.VerdikaGame = (function() {
             ctx.fillStyle = this.frozenTimer > 0 ? '#00ffff' : this.color; 
             ctx.fill(); ctx.closePath();
         }
-    }
-   /**
+                                            }
+    /**
  * =============================================================================
  * File: game.js (Part 3 of 3)
  * =============================================================================
  */
     function spawnWave(waveNumber) {
-        if(ACTIVE_ENTITIES.player) ACTIVE_ENTITIES.player.ticks = 0; // reset wave timers
+        if(ACTIVE_ENTITIES.player) ACTIVE_ENTITIES.player.ticks = 0; 
+        gameState.waveCleared = false; // Reset clear state
         const enemyCount = waveNumber * 4 + 2;
         const enemyTypes = Object.keys(ENEMY_DICTIONARY);
 
@@ -287,7 +315,7 @@ window.VerdikaGame = (function() {
                 const distance = Math.hypot(p.x - e.x, p.y - e.y);
                 if (distance < p.radius + e.radius) {
                     let actualDmg = e.damage * 0.05 - p.armorMod;
-                    p.hp -= Math.max(1, actualDmg); // min 1 dmg
+                    p.hp -= Math.max(1, actualDmg); 
                     if(p.cortosis) e.hp -= 5;
                     
                     e.x -= (p.x - e.x) / distance * (e.speed * 6);
@@ -311,6 +339,7 @@ window.VerdikaGame = (function() {
         gameState.isRunning = false;
         document.getElementById('btn-pause').style.display = 'none'; 
         document.getElementById('game-hud').style.display = 'none'; 
+        document.getElementById('btn-go-foundry').style.display = 'none'; 
         document.getElementById('game-over').style.display = 'flex';
         document.getElementById('game-over-stats').innerText = `Reached Wave ${gameState.wave}. Gathered ${gameState.beskarScrap} Beskar.`;
     }
@@ -318,6 +347,7 @@ window.VerdikaGame = (function() {
     function resetGame() {
         ACTIVE_ENTITIES.player = null; ACTIVE_ENTITIES.enemies = [];
         ACTIVE_ENTITIES.projectiles = []; ACTIVE_ENTITIES.loot = [];
+        ACTIVE_ENTITIES.particles = [];
         gameState.wave = 1; gameState.beskarScrap = 0; inputState.isDragging = false;
     }
 
@@ -329,11 +359,8 @@ window.VerdikaGame = (function() {
 
     function triggerMarketPhase() {
         gameState.isMarket = true; inputState.isDragging = false;
-        
-        let shuffled = [...MARKET_DICTIONARY].sort(() => 0.5 - Math.random());
-        let selectedItems = shuffled.slice(0, 4);
-
-        window.dispatchEvent(new CustomEvent('verdikaOpenMarket', { detail: { items: selectedItems } }));
+        // Full list delivery ensuring repeated duplicate purchases are available to player
+        window.dispatchEvent(new CustomEvent('verdikaOpenMarket', { detail: { items: MARKET_DICTIONARY } }));
     }
 
     function gameLoop() {
@@ -342,10 +369,20 @@ window.VerdikaGame = (function() {
             if (ACTIVE_ENTITIES.player) ACTIVE_ENTITIES.player.update();
             ACTIVE_ENTITIES.enemies.forEach(e => e.update(ACTIVE_ENTITIES.player));
             ACTIVE_ENTITIES.projectiles.forEach(p => p.update());
+            ACTIVE_ENTITIES.particles.forEach(p => p.update());
+            ACTIVE_ENTITIES.particles = ACTIVE_ENTITIES.particles.filter(p => p.life > 0);
             ACTIVE_ENTITIES.loot.forEach(l => l.update());
+            
             checkCollisions();
 
-            if (ACTIVE_ENTITIES.enemies.length === 0 && ACTIVE_ENTITIES.player) triggerShopPhase();
+            // Pacing Hook: Free-roaming loot mechanic integration
+            if (ACTIVE_ENTITIES.enemies.length === 0 && ACTIVE_ENTITIES.player) {
+                if(!gameState.waveCleared) {
+                    gameState.waveCleared = true;
+                    saveProgress();
+                    window.dispatchEvent(new Event('verdikaWaveCleared'));
+                }
+            }
         }
         renderCanvas();
         requestAnimationFrame(gameLoop);
@@ -356,10 +393,16 @@ window.VerdikaGame = (function() {
         if (ACTIVE_ENTITIES.player) ACTIVE_ENTITIES.player.render();
         ACTIVE_ENTITIES.enemies.forEach(e => e.render());
         ACTIVE_ENTITIES.projectiles.forEach(p => p.render());
+        ACTIVE_ENTITIES.particles.forEach(p => p.render());
         ACTIVE_ENTITIES.loot.forEach(l => l.render());
         
         document.getElementById('hud-wave-val').innerText = gameState.wave;
         document.getElementById('hud-scrap-val').innerText = gameState.beskarScrap;
+    }
+
+    function saveProgress() {
+        try { localStorage.setItem('verdika_save_state', JSON.stringify(gameState)); } 
+        catch (e) { console.warn('OpSec: LocalStorage blocked by browser privacy settings.'); }
     }
 
     return {
@@ -384,6 +427,8 @@ window.VerdikaGame = (function() {
                 resetGame(); ctx.clearRect(0, 0, canvas.width, canvas.height);
             });
 
+            window.addEventListener('verdikaEnterFoundry', () => triggerShopPhase());
+
             window.addEventListener('verdikaBuyUpgrade', (e) => {
                 const { type, cost } = e.detail;
                 if (gameState.beskarScrap >= cost && ACTIVE_ENTITIES.player) {
@@ -396,34 +441,34 @@ window.VerdikaGame = (function() {
             });
 
             window.addEventListener('verdikaSellShop', () => {
-                gameState.beskarScrap += 75; // average value refund
+                gameState.beskarScrap += 75; 
                 gameState.isShopping = false;
                 window.dispatchEvent(new CustomEvent('verdikaUpdateShopUI', { detail: { beskar: gameState.beskarScrap } }));
                 triggerMarketPhase();
             });
 
+            // Enables endless stacked purchases (no auto-close)
             window.addEventListener('verdikaBuyMarketItem', (e) => {
                 const { id, cost } = e.detail;
                 if (gameState.beskarScrap >= cost && ACTIVE_ENTITIES.player) {
                     gameState.beskarScrap -= cost; const p = ACTIVE_ENTITIES.player;
-                    if(id === 'w_heavy') p.fireRate = 225;
-                    if(id === 'w_scatter') p.weaponType = 'scatter';
-                    if(id === 'w_sniper') { p.damageMod += 20; p.fireRate = 900; }
-                    if(id === 'w_carbine') p.projSpeed = 18;
-                    if(id === 'w_plasma') p.damageMod += 10;
+                    if(id === 'w_heavy') { p.weaponType = 'heavy'; p.fireRate = Math.max(50, p.fireRate - 100); }
+                    if(id === 'w_scatter') { p.weaponType = 'scatter'; p.scatterCount += 2; }
+                    if(id === 'w_sniper') { p.weaponType = 'sniper'; p.damageMod += 20; p.fireRate = 900; p.projSpeed += 3; }
+                    if(id === 'w_carbine') { p.weaponType = 'carbine'; p.projSpeed += 4; }
+                    if(id === 'w_plasma') { p.weaponType = 'plasma'; p.damageMod += 10; }
                     if(id === 'a_pauldrons') { p.maxHp += 50; p.hp += 50; }
-                    if(id === 'a_plating') p.armorMod = 2;
+                    if(id === 'a_plating') p.armorMod += 2;
                     if(id === 'a_reflec') { p.maxSpeed *= 1.2; p.baseSpeed *= 1.2; }
-                    if(id === 'a_shield') p.healthRegen = 1;
+                    if(id === 'a_shield') p.healthRegen += 1;
                     if(id === 'a_cortosis') p.cortosis = true;
                     if(id === 'i_carbonite') p.carbonite = true;
                     if(id === 'i_bacta') p.hp = p.maxHp;
                     if(id === 'i_magnet') p.magnet = true;
-                    if(id === 'i_optics') p.optics = 2.0;
+                    if(id === 'i_optics') p.optics += 1.0;
                     if(id === 'i_stim') p.stim = true;
                     
                     window.dispatchEvent(new CustomEvent('verdikaUpdateShopUI', { detail: { beskar: gameState.beskarScrap } }));
-                    window.dispatchEvent(new Event('verdikaMarketPurchaseSuccess'));
                 }
             });
 
@@ -437,10 +482,11 @@ window.VerdikaGame = (function() {
             
             window.addEventListener('verdikaPauseGame', () => gameState.isRunning = false );
             window.addEventListener('verdikaResumeGame', () => {
-                if (ACTIVE_ENTITIES.player) { gameState.isRunning = true; requestAnimationFrame(gameLoop); }
+                if (ACTIVE_ENTITIES.player) { gameState.isRunning = true; inputState.lastTime = Date.now(); requestAnimationFrame(gameLoop); }
             });
             window.addEventListener('verdikaQuitToMenu', () => {
                 gameState.isRunning = false; document.getElementById('main-menu').style.display = 'flex';
+                document.getElementById('btn-go-foundry').style.display = 'none';
                 resetGame(); ctx.clearRect(0, 0, canvas.width, canvas.height);
             });
         }
