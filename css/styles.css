@@ -2,8 +2,9 @@
 =============================================================================
 File: styles.css (Part 1)
 Project: Project_Verdika
-Description: Global stylesheet with top-level CSS variables and strict viewport 
-             locking to prevent mobile drag. Added Deep-Space Market Theme.
+Description: Global stylesheet utilizing CSS custom properties for thematic
+             consistency[span_7](start_span)[span_7](end_span). Viewport locked to prevent mobile drag.
+             Includes strict resets for uniform browser rendering[span_8](start_span)[span_8](end_span).
 =============================================================================
 */
 
@@ -34,13 +35,19 @@ html, body {
     --color-gold: #ffd700;
     --color-reliability-blue: #4682b4;
     --color-lust-orange: #ff8c00;
+    
+    /* Terminal Colors[span_9](start_span)[span_9](end_span) */
+    --color-terminal-bg: #020202;
+    --color-terminal-green: #00ff00;
+    --color-terminal-dark-green: rgba(0, 255, 0, 0.15);
+    
     --color-dark-bg: #0a0a0a;
-    --color-market-bg: #05050a;
     --color-panel-bg: rgba(20, 20, 30, 0.75);
     
     --glow-primary: 0 0 15px rgba(139, 0, 0, 0.6);
     --glow-secondary: 0 0 10px rgba(192, 192, 192, 0.3);
     --font-primary: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    --font-terminal: 'Courier New', Courier, monospace;
 
     --spacing-sm: 8px;
     --spacing-md: 16px;
@@ -138,6 +145,11 @@ html, body {
     font-size: 1rem;
     touch-action: auto;
 }
+/*
+=============================================================================
+File: styles.css (Part 2)
+=============================================================================
+*/
 
 .main-menu__actions {
     display: flex;
@@ -145,11 +157,6 @@ html, body {
     gap: var(--spacing-md);
     width: 100%;
 }
-/*
-=============================================================================
-File: styles.css (Part 2)
-=============================================================================
-*/
 
 .main-menu__button {
     background-color: rgba(139, 90, 43, 0.8);
@@ -213,11 +220,11 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.85); }
     margin: var(--spacing-md) 0;
 }
 
-/* GALACTIC MARKET STYLES */
+/* GALACTIC MARKET: FUTURISTIC TERMINAL STYLES */
 .market-panel {
-    background-color: rgba(5, 5, 15, 0.98);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
+    background-color: var(--color-terminal-bg);
+    border: 2px solid var(--color-terminal-green);
+    font-family: var(--font-terminal);
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
     z-index: 150;
@@ -234,49 +241,73 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.85); }
     margin-bottom: var(--spacing-lg);
 }
 
+.market-panel__header h2, .market-panel p {
+    color: var(--color-terminal-green);
+    text-shadow: 0 0 8px var(--color-terminal-green);
+}
+
 .market-panel__header h2 {
-    color: var(--color-reliability-blue);
-    font-size: 2rem;
+    font-size: 2.2rem;
     text-transform: uppercase;
-    letter-spacing: 3px;
-    text-shadow: 0 0 10px var(--color-reliability-blue);
+    letter-spacing: 4px;
 }
 
 .market-items {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: var(--spacing-md);
     width: 100%;
     max-width: 700px;
     margin-bottom: var(--spacing-lg);
 }
+@media screen and (min-width: 600px) {
+    .market-items { grid-template-columns: 1fr 1fr; }
+}
 
 .market-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(70, 130, 180, 0.4);
+    background: transparent;
+    border: 1px solid var(--color-terminal-green);
     padding: var(--spacing-md);
-    border-radius: 8px;
+    border-radius: 4px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     text-align: left;
+    color: var(--color-terminal-green);
 }
 
 .market-card:hover {
-    background: rgba(70, 130, 180, 0.1);
-    border-color: var(--color-reliability-blue);
-    box-shadow: 0 0 15px rgba(70, 130, 180, 0.4);
+    background: var(--color-terminal-dark-green);
+    box-shadow: 0 0 15px var(--color-terminal-green);
 }
 
 .market-card h4 {
-    color: var(--color-gold);
-    margin-bottom: 4px;
+    color: var(--color-terminal-green);
+    margin-bottom: 8px;
+    font-weight: bold;
 }
 
 .market-card p {
-    font-size: 0.85rem;
-    margin-bottom: var(--spacing-sm);
+    font-size: 0.9rem;
+    margin-bottom: var(--spacing-md);
     flex-grow: 1;
+}
+
+.market-btn {
+    background-color: var(--color-terminal-dark-green);
+    color: var(--color-terminal-green);
+    border: 1px solid var(--color-terminal-green);
+    padding: 10px;
+    cursor: pointer;
+    font-family: var(--font-terminal);
+    font-weight: bold;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    width: 100%;
+}
+.market-btn:hover {
+    background-color: var(--color-terminal-green);
+    color: #000;
 }
 
 .market-panel__actions {
