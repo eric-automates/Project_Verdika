@@ -1,12 +1,13 @@
 /*
-=============================================================================
-File: styles.css (Part 1)
-Project: Project_Verdika
-Description: Global stylesheet utilizing CSS custom properties for thematic
-             consistency[span_7](start_span)[span_7](end_span). Viewport locked to prevent mobile drag.
-             Includes strict resets for uniform browser rendering[span_8](start_span)[span_8](end_span).
-=============================================================================
-*/
+ * =============================================================================
+ * File: styles.css
+ * Project: Verd'ika: Resol'nare
+ * Description: Global stylesheet using unified CSS custom properties.
+ * Structure: Reset -> CSS Variables (:root) -> Utilities UI -> Game HUD UI.
+ * How to Add Features: Utilize existing CSS variables for any new element classes.
+ * Mandatory Update Points: :root variables when adjusting the thematic color palette.
+ * =============================================================================
+ */
 
 * {
     margin: 0;
@@ -16,6 +17,7 @@ Description: Global stylesheet utilizing CSS custom properties for thematic
     -webkit-user-select: none;
 }
 
+/* Base App Setup - Ensures a realistic, deep background */
 html, body {
     width: 100%;
     height: 100%;
@@ -25,29 +27,30 @@ html, body {
     color: var(--color-beskar-silver);
     font-family: var(--font-primary);
     line-height: 1.6;
-    background: radial-gradient(circle at center, #1a1a2e 0%, var(--color-dark-bg) 100%);
+    background: radial-gradient(circle at 50% 50%, #1e1e2f 0%, #08080c 100%);
 }
 
+/* Centralized Thematic Consistency */
 :root {
-    --color-durasteel-rust: #8b5a2b;
-    --color-beskar-silver: #c0c0c0;
-    --color-honor-red: #8b0000;
-    --color-gold: #ffd700;
-    --color-reliability-blue: #4682b4;
-    --color-lust-orange: #ff8c00;
+    --color-durasteel-rust: #a66a38;
+    --color-beskar-silver: #e0e0e0;
+    --color-honor-red: #d32f2f;
+    --color-gold: #ffea00;
+    --color-reliability-blue: #4fc3f7;
+    --color-lust-orange: #ff9800;
     
-    /* Terminal Colors[span_9](start_span)[span_9](end_span) */
-    --color-terminal-bg: #020202;
-    --color-terminal-green: #00ff00;
-    --color-terminal-dark-green: rgba(0, 255, 0, 0.15);
+    --color-terminal-bg: #050505;
+    --color-terminal-green: #00ff41;
+    --color-terminal-dark-green: rgba(0, 255, 65, 0.1);
     
-    --color-dark-bg: #0a0a0a;
-    --color-panel-bg: rgba(20, 20, 30, 0.75);
+    --color-dark-bg: #050508;
+    --color-panel-bg: rgba(20, 20, 30, 0.4);
     
-    --glow-primary: 0 0 15px rgba(139, 0, 0, 0.6);
-    --glow-secondary: 0 0 10px rgba(192, 192, 192, 0.3);
-    --font-primary: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    --font-terminal: 'Courier New', Courier, monospace;
+    --glow-primary: 0 0 20px rgba(211, 47, 47, 0.8);
+    --glow-secondary: 0 0 15px rgba(224, 224, 224, 0.4);
+    
+    --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-terminal: 'Fira Code', 'Courier New', Courier, monospace;
 
     --spacing-sm: 8px;
     --spacing-md: 16px;
@@ -55,297 +58,159 @@ html, body {
     --spacing-xl: 32px;
 }
 
+/* Advanced Glassmorphism */
 .glass-panel {
     background-color: var(--color-panel-bg);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-    border-radius: 12px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
 }
 
+/* Mandatory App Navigation */
+.app-nav {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm);
+    z-index: 100;
+    position: relative;
+    pointer-events: auto;
+}
+
+.nav-btn {
+    background-color: rgba(166, 106, 56, 0.85);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 6px var(--spacing-md);
+    border-radius: 8px;
+    font-family: var(--font-primary);
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    touch-action: auto;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.nav-btn:hover { 
+    background-color: var(--color-durasteel-rust); 
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.5);
+}
+
+/* Health Gauges */
+.health-metric { text-align: left; margin: var(--spacing-sm) 0; }
+.health-metric label { display: block; margin-bottom: 6px; font-size: 0.85rem; color: var(--color-beskar-silver); }
+.health-metric progress { width: 100%; height: 12px; border-radius: 6px; overflow: hidden; }
+.health-metric progress::-webkit-progress-bar { background-color: rgba(255,255,255,0.1); }
+.health-metric progress::-webkit-progress-value { background-color: var(--color-reliability-blue); }
+
+/* Game HUD */
 .game-hud {
     position: absolute;
     top: 60px; 
     left: 16px;
     display: flex;
-    gap: var(--spacing-md);
-    padding: 8px var(--spacing-md);
+    gap: var(--spacing-lg);
+    padding: 12px var(--spacing-lg);
     z-index: 90;
     pointer-events: none;
+    border-radius: 12px;
 }
 
-.hud-stat {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-}
+.hud-stat { display: flex; flex-direction: column; align-items: flex-start; }
+.hud-label { font-size: 0.65rem; font-weight: 800; color: rgba(255,255,255,0.6); letter-spacing: 1.5px; }
+.hud-value, .hud-value--gold { font-size: 1.4rem; font-weight: 900; color: #ffffff; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+.hud-value--gold { color: var(--color-gold); text-shadow: 0 0 10px rgba(255, 234, 0, 0.4); }
 
-.hud-label {
-    font-size: 0.7rem;
-    font-weight: bold;
-    color: var(--color-beskar-silver);
-    letter-spacing: 1px;
-}
+.foundry-float { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 95; width: auto; box-shadow: var(--glow-secondary); }
 
-.hud-value, .hud-value--gold {
-    font-size: 1.1rem;
-    font-weight: bold;
-    color: #ffffff;
-}
-
-.hud-value--gold { color: var(--color-gold); }
-
+/* Main Menus & Modals */
 .main-menu {
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: var(--spacing-xl);
-    max-width: 500px;
-    margin: 15vh auto;
+    max-width: 480px;
+    margin: 10vh auto;
     text-align: center;
     position: relative;
     z-index: 80;
 }
 
-.main-menu__header h1 {
-    font-size: 2.2rem;
-    color: var(--color-beskar-silver);
-    text-shadow: var(--glow-secondary);
-    margin-bottom: 5px;
-}
+.main-menu__header h1 { font-size: 2.6rem; color: #ffffff; text-shadow: var(--glow-secondary); margin-bottom: 4px; font-weight: 900; letter-spacing: -1px;}
+.subtitle { color: var(--color-lust-orange); font-weight: 700; text-transform: uppercase; letter-spacing: 3px; font-size: 0.85rem; margin-bottom: var(--spacing-lg); }
 
-.subtitle {
-    color: var(--color-lust-orange);
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    margin-bottom: var(--spacing-lg);
-}
-
-.main-menu__archetype-select {
-    margin-bottom: var(--spacing-lg);
-    text-align: left;
-    width: 100%;
-}
-
-.main-menu__archetype-select label {
-    display: block;
-    margin-bottom: var(--spacing-sm);
-    color: var(--color-gold);
-}
-
+.main-menu__archetype-select { margin-bottom: var(--spacing-lg); text-align: left; width: 100%; }
+.main-menu__archetype-select label { display: block; margin-bottom: var(--spacing-sm); color: var(--color-gold); font-size: 0.9rem; font-weight: 600;}
 .main-menu__archetype-select select {
-    width: 100%;
-    padding: 10px;
-    background: rgba(0,0,0,0.6);
-    color: #fff;
-    border: 1px solid var(--color-durasteel-rust);
-    border-radius: 6px;
-    font-size: 1rem;
-    touch-action: auto;
+    width: 100%; padding: 12px; background: rgba(0,0,0,0.5); color: #fff;
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; font-size: 1rem; touch-action: auto; outline: none;
 }
-/*
-=============================================================================
-File: styles.css (Part 2)
-=============================================================================
-*/
+.main-menu__archetype-select select:focus { border-color: var(--color-gold); }
 
-.main-menu__actions {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-md);
-    width: 100%;
-}
+.main-menu__actions { display: flex; flex-direction: column; gap: var(--spacing-md); width: 100%; }
 
 .main-menu__button {
-    background-color: rgba(139, 90, 43, 0.8);
-    color: #ffffff;
-    padding: 12px var(--spacing-lg);
-    border: 1px solid transparent;
-    border-radius: 6px;
-    cursor: pointer;
-    font-family: var(--font-primary);
-    font-size: 1rem;
-    font-weight: bold;
-    text-transform: uppercase;
-    transition: all 0.2s ease;
-    width: 100%;
-    touch-action: auto;
+    background-color: rgba(166, 106, 56, 0.8); color: #ffffff;
+    padding: 14px var(--spacing-lg); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+    cursor: pointer; font-family: var(--font-primary); font-size: 1rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease; width: 100%; touch-action: auto;
 }
 
-.main-menu__button:hover {
-    background-color: var(--color-durasteel-rust);
-    box-shadow: 0 0 15px var(--color-durasteel-rust);
+.main-menu__button:hover { background-color: var(--color-durasteel-rust); box-shadow: 0 8px 20px rgba(0,0,0,0.5); transform: translateY(-2px); }
+.main-menu__button--primary { background-color: rgba(211, 47, 47, 0.85); border: 1px solid rgba(255, 100, 100, 0.3); }
+.main-menu__button--primary:hover { background-color: var(--color-honor-red); box-shadow: var(--glow-primary); }
+.main-menu__button--danger { background-color: rgba(20,20,20,0.6); border: 1px solid var(--color-honor-red); color: #ff6b6b; }
+.main-menu__button--danger:hover { background-color: var(--color-honor-red); color: #fff; box-shadow: var(--glow-primary); }
+
+.modal-panel { color: var(--color-beskar-silver); padding: var(--spacing-xl); max-width: 450px; margin: 10vh auto; touch-action: auto; text-align: center; border-radius: 16px; }
+.modal-panel--large { max-width: 650px; max-height: 80vh; overflow-y: auto; touch-action: pan-y; }
+dialog::backdrop { background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(6px); }
+
+.shop-items { display: flex; flex-direction: column; gap: var(--spacing-md); margin: var(--spacing-md) 0; }
+
+/* THREAT LOG */
+.threat-log-header {
+    display: flex; justify-content: center; align-items: center;
+    margin-bottom: var(--spacing-md); padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.threat-list { display: grid; grid-template-columns: 1fr; gap: var(--spacing-sm); margin-bottom: var(--spacing-lg); }
+.threat-card {
+    background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: var(--spacing-md); border-radius: 8px; font-size: 0.95rem; text-align: left;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
 }
 
-.main-menu__button--primary { background-color: rgba(139, 0, 0, 0.85); }
-.main-menu__button--primary:hover {
-    background-color: var(--color-honor-red);
-    box-shadow: var(--glow-primary);
-}
-
-.main-menu__button--danger {
-    background-color: transparent;
-    border: 1px solid var(--color-honor-red);
-    color: var(--color-honor-red);
-}
-
-.main-menu__button--danger:hover {
-    background-color: var(--color-honor-red);
-    color: #fff;
-}
-
-.modal-panel {
-    color: var(--color-beskar-silver);
-    padding: var(--spacing-lg);
-    max-width: 450px;
-    margin: 10vh auto;
-    touch-action: auto;
-}
-
-.modal-panel--large {
-    max-width: 650px;
-    max-height: 80vh;
-    overflow-y: auto;
-    touch-action: pan-y; 
-}
-
-dialog::backdrop { background: rgba(0, 0, 0, 0.85); }
-
-.shop-items {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-sm);
-    margin: var(--spacing-md) 0;
-}
-
-/* GALACTIC MARKET: FUTURISTIC TERMINAL STYLES */
+/* TERMINAL / MARKET */
 .market-panel {
-    background-color: var(--color-terminal-bg);
-    border: 2px solid var(--color-terminal-green);
-    font-family: var(--font-terminal);
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    z-index: 150;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: var(--spacing-xl);
-    overflow-y: auto;
-    touch-action: pan-y;
+    background-color: var(--color-terminal-bg); border: 1px solid rgba(0, 255, 65, 0.3);
+    font-family: var(--font-terminal); position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 150; display: flex; flex-direction: column; align-items: center;
+    padding: var(--spacing-xl); overflow-y: auto; touch-action: pan-y;
+    box-shadow: inset 0 0 100px rgba(0, 255, 65, 0.05);
 }
-
-.market-panel__header {
-    text-align: center;
-    margin-bottom: var(--spacing-lg);
-}
-
-.market-panel__header h2, .market-panel p {
-    color: var(--color-terminal-green);
-    text-shadow: 0 0 8px var(--color-terminal-green);
-}
-
-.market-panel__header h2 {
-    font-size: 2.2rem;
-    text-transform: uppercase;
-    letter-spacing: 4px;
-}
-
-.market-items {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--spacing-md);
-    width: 100%;
-    max-width: 700px;
-    margin-bottom: var(--spacing-lg);
-}
-@media screen and (min-width: 600px) {
-    .market-items { grid-template-columns: 1fr 1fr; }
-}
-
+.market-panel__header { text-align: center; margin-bottom: var(--spacing-lg); }
+.market-panel__header h2, .market-panel p { color: var(--color-terminal-green); text-shadow: 0 0 10px rgba(0, 255, 65, 0.5); }
+.market-items { display: grid; grid-template-columns: 1fr; gap: var(--spacing-md); width: 100%; max-width: 700px; margin-bottom: var(--spacing-lg); }
+@media screen and (min-width: 600px) { .market-items { grid-template-columns: 1fr 1fr; } }
 .market-card {
-    background: transparent;
-    border: 1px solid var(--color-terminal-green);
-    padding: var(--spacing-md);
-    border-radius: 4px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    text-align: left;
-    color: var(--color-terminal-green);
+    background: rgba(0, 255, 65, 0.02); border: 1px solid rgba(0, 255, 65, 0.2); padding: var(--spacing-md); border-radius: 8px;
+    display: flex; flex-direction: column; justify-content: space-between; text-align: left; color: var(--color-terminal-green);
+    transition: transform 0.2s ease;
 }
-
-.market-card:hover {
-    background: var(--color-terminal-dark-green);
-    box-shadow: 0 0 15px var(--color-terminal-green);
-}
-
-.market-card h4 {
-    color: var(--color-terminal-green);
-    margin-bottom: 8px;
-    font-weight: bold;
-}
-
-.market-card p {
-    font-size: 0.9rem;
-    margin-bottom: var(--spacing-md);
-    flex-grow: 1;
-}
-
+.market-card:hover { transform: translateY(-2px); border-color: var(--color-terminal-green); box-shadow: 0 4px 15px rgba(0, 255, 65, 0.1); }
 .market-btn {
-    background-color: var(--color-terminal-dark-green);
-    color: var(--color-terminal-green);
-    border: 1px solid var(--color-terminal-green);
-    padding: 10px;
-    cursor: pointer;
-    font-family: var(--font-terminal);
-    font-weight: bold;
-    text-transform: uppercase;
-    transition: all 0.2s;
-    width: 100%;
+    background-color: var(--color-terminal-dark-green); color: var(--color-terminal-green);
+    border: 1px solid var(--color-terminal-green); padding: 12px; cursor: pointer; border-radius: 4px;
+    font-family: var(--font-terminal); font-weight: bold; text-transform: uppercase; width: 100%; transition: all 0.2s; margin-top: 10px;
 }
-.market-btn:hover {
-    background-color: var(--color-terminal-green);
-    color: #000;
-}
+.market-btn:hover { background-color: var(--color-terminal-green); color: #000; box-shadow: 0 0 15px rgba(0, 255, 65, 0.4); }
+.market-panel__actions { width: 100%; max-width: 400px; margin-top: auto; }
 
-.market-panel__actions {
-    width: 100%;
-    max-width: 400px;
-    margin-top: auto;
-}
-
-header {
-    position: absolute;
-    top: 0; left: 0; width: 100%;
-    padding: var(--spacing-md);
-    z-index: 100;
-    pointer-events: none; 
-}
-
-nav { display: flex; justify-content: space-between; }
-
-nav button {
-    background-color: rgba(139, 90, 43, 0.85);
-    color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: var(--spacing-sm) var(--spacing-md);
-    border-radius: 6px;
-    font-family: var(--font-primary);
-    font-weight: bold;
-    cursor: pointer;
-    pointer-events: auto; 
-    transition: all 0.2s;
-    touch-action: auto;
-}
-
-nav button:hover { background-color: var(--color-durasteel-rust); }
-
-#dropdown-about { pointer-events: auto; margin-top: var(--spacing-sm); }
-#game-canvas {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    z-index: 10;
-    touch-action: none;
-}
+#game-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; touch-action: none; }
+.ascii-art { font-family: var(--font-terminal); font-size: 0.85rem; white-space: pre; text-align: center; margin-bottom: var(--spacing-md); color: rgba(0, 255, 65, 0.8); }
+                                   
