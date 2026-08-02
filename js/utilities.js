@@ -28,6 +28,8 @@ const VerdikaUtilities = (function() {
         elements.modalSettings = document.getElementById('modal-settings');
         elements.modalQuitConfirm = document.getElementById('modal-quit-confirm');
         
+        elements.btnGoFoundry = document.getElementById('btn-go-foundry');
+
         // Shop Elements
         elements.modalShop = document.getElementById('modal-shop');
         elements.btnCloseShop = document.getElementById('btn-close-shop');
@@ -54,6 +56,16 @@ const VerdikaUtilities = (function() {
     }
 
     function initShopAndMarket() {
+        // Trigger Foundry manually post-wave
+        window.addEventListener('verdikaWaveCleared', () => {
+            elements.btnGoFoundry.style.display = 'block';
+        });
+
+        elements.btnGoFoundry.addEventListener('click', () => {
+            elements.btnGoFoundry.style.display = 'none';
+            window.dispatchEvent(new Event('verdikaEnterFoundry'));
+        });
+
         // Standard Shop Purchases
         elements.shopBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -85,7 +97,7 @@ const VerdikaUtilities = (function() {
 
         window.addEventListener('verdikaOpenShop', () => { elements.modalShop.showModal(); });
 
-        // Market Generation
+        // Market Generation - Now generating full list to allow duplicate buying
         window.addEventListener('verdikaOpenMarket', (e) => {
             elements.marketPanel.style.display = 'flex';
             elements.marketItemsContainer.innerHTML = '';
@@ -97,35 +109,29 @@ const VerdikaUtilities = (function() {
                 card.className = 'market-card';
                 card.innerHTML = `
                     <div>
-                        <h4>${item.name} <span class="badge">${item.type.toUpperCase()}</span></h4>
-                        <p>${item.desc}</p>
+                        <h4>${item.name} <span class="badge">[${item.type.toUpperCase()}]</span></h4>
+                        <p>> ${item.desc}</p>
                     </div>
-                    <button class="main-menu__button shop-btn" data-id="${item.id}" data-cost="${item.cost}">
+                    <button class="market-btn market-btn-buy" data-id="${item.id}" data-cost="${item.cost}">
                         Buy - ${item.cost} Beskar
                     </button>
                 `;
                 elements.marketItemsContainer.appendChild(card);
             });
 
-            // Attach dynamic buy listeners
-            const marketBuyBtns = elements.marketItemsContainer.querySelectorAll('.shop-btn');
+            const marketBuyBtns = elements.marketItemsContainer.querySelectorAll('.market-btn-buy');
             marketBuyBtns.forEach(btn => {
                 btn.addEventListener('click', (ev) => {
                     const id = ev.target.getAttribute('data-id');
                     const cost = parseInt(ev.target.getAttribute('data-cost'), 10);
+                    // Fires event but does NOT close the market (allows duplicate buying)
                     window.dispatchEvent(new CustomEvent('verdikaBuyMarketItem', { detail: { id, cost } }));
                 });
             });
         });
 
-        // Market skip
+        // Market exit trigger
         elements.btnSkipMarket.addEventListener('click', () => {
-            elements.marketPanel.style.display = 'none';
-            window.dispatchEvent(new Event('verdikaCloseMarket'));
-        });
-        
-        // Auto-close market successfully bought item
-        window.addEventListener('verdikaMarketPurchaseSuccess', () => {
             elements.marketPanel.style.display = 'none';
             window.dispatchEvent(new Event('verdikaCloseMarket'));
         });
