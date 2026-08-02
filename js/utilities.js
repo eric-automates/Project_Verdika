@@ -2,11 +2,10 @@
  * =============================================================================
  * File: utilities.js
  * Project: Project_Verdika
- * Description: Mandatory Utilities Layer containing the Help guide, About 
- *              dropdown, Settings Modals, Health Gauges, and Threat Log renderer.
+ * Description: Mandatory Utilities Layer containing DOM interactions and the
+ *              Galactic Market event dispatchers.
  * Architecture Rules:
  *   - Zero-Dependency: Pure Vanilla JavaScript, no external libraries.
- *   - OpSec/Privacy: Gracefully handles LocalStorage security blocks.
  *   - DOM Interaction: Hooks into the semantic HTML5 foundation.
  * =============================================================================
  */
@@ -24,22 +23,23 @@ const VerdikaUtilities = (function() {
         elements.btnQuitGame = document.getElementById('btn-quit-game');
         elements.btnConfirmQuit = document.getElementById('btn-confirm-quit');
         elements.btnCancelQuit = document.getElementById('btn-cancel-quit');
-        elements.btnThreatLog = document.getElementById('btn-threat-log');
-        elements.btnCloseThreatLog = document.getElementById('btn-close-threat-log');
         
         elements.aboutDropdown = document.getElementById('dropdown-about');
-        elements.parkingLot = document.getElementById('parking-lot');
         elements.modalSettings = document.getElementById('modal-settings');
         elements.modalQuitConfirm = document.getElementById('modal-quit-confirm');
-        elements.modalThreatLog = document.getElementById('modal-threat-log');
-        elements.threatList = document.getElementById('threat-list');
-        elements.healthGaugesTarget = document.getElementById('health-gauges');
         
         // Shop Elements
         elements.modalShop = document.getElementById('modal-shop');
         elements.btnCloseShop = document.getElementById('btn-close-shop');
+        elements.btnSellShop = document.getElementById('btn-sell-shop');
         elements.shopBeskarVal = document.getElementById('shop-beskar-val');
         elements.shopBtns = document.querySelectorAll('.shop-btn');
+
+        // Market Elements
+        elements.marketPanel = document.getElementById('galactic-market');
+        elements.marketItemsContainer = document.getElementById('market-items-container');
+        elements.btnSkipMarket = document.getElementById('btn-skip-market');
+        elements.marketBeskarVal = document.getElementById('market-beskar-val');
     }
 
     function initHelp() {
@@ -48,80 +48,86 @@ const VerdikaUtilities = (function() {
             elements.aboutDropdown.style.display = isHidden ? 'block' : 'none';
             elements.btnHelp.textContent = isHidden ? 'Return' : 'Help';
 
-            if (isHidden) {
-                window.dispatchEvent(new Event('verdikaHelpOpened'));
-            } else {
-                window.dispatchEvent(new Event('verdikaHelpClosed'));
-            }
+            if (isHidden) window.dispatchEvent(new Event('verdikaHelpOpened'));
+            else window.dispatchEvent(new Event('verdikaHelpClosed'));
         });
     }
 
-    function initThreatLog() {
-        elements.btnThreatLog.addEventListener('click', () => {
-            elements.modalThreatLog.showModal();
-            elements.threatList.innerHTML = ''; 
-
-            const enemies = window.VerdikaGame ? window.VerdikaGame.getEnemyDictionary() : {};
-
-            for (const [key, data] of Object.entries(enemies)) {
-                const card = document.createElement('div');
-                card.className = 'threat-card';
-                
-                const svgVisual = `
-                <div class="threat-card__visual">
-                    <svg width="65" height="65" viewBox="0 0 65 65">
-                        <rect x="12.5" y="6" width="40" height="4" fill="red" rx="1"/>
-                        <rect x="12.5" y="6" width="40" height="4" fill="green" rx="1"/>
-                        <path d="M 32.5 35 L 50.5 22.5 A 18 18 0 0 1 50.5 47.5 Z" fill="rgba(255, 255, 255, 0.45)"/>
-                        <circle cx="32.5" cy="35" r="${Math.min(data.radius * 1.1, 16)}" fill="${data.color}" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
-                    </svg>
-                </div>`;
-
-                card.innerHTML = `
-                    ${svgVisual}
-                    <div class="threat-card__info">
-                        <h4>${key} <span class="badge" style="background-color: ${data.color};">${data.type.toUpperCase()}</span></h4>
-                        <p><strong>Base HP:</strong> ${data.hp} | <strong>Speed:</strong> ${data.speed} | <strong>Damage:</strong> ${data.damage}</p>
-                        <p><strong>Behavior:</strong> ${data.behavior}</p>
-                        <p><strong>Pros:</strong> ${data.pros}</p>
-                        <p><strong>Cons:</strong> ${data.cons}</p>
-                    </div>
-                `;
-                elements.threatList.appendChild(card);
-            }
-        });
-
-        elements.btnCloseThreatLog.addEventListener('click', () => {
-            elements.modalThreatLog.close();
-        });
-    }
-
-    function initShop() {
+    function initShopAndMarket() {
+        // Standard Shop Purchases
         elements.shopBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const type = e.target.getAttribute('data-type');
                 const cost = parseInt(e.target.getAttribute('data-cost'), 10);
-                
-                const event = new CustomEvent('verdikaBuyUpgrade', {
-                    detail: { type, cost }
-                });
-                window.dispatchEvent(event);
+                window.dispatchEvent(new CustomEvent('verdikaBuyUpgrade', { detail: { type, cost } }));
             });
         });
 
+        // Skip standard shop, move to next wave
         elements.btnCloseShop.addEventListener('click', () => {
             elements.modalShop.close();
             window.dispatchEvent(new Event('verdikaCloseShop'));
         });
 
+        // Sell items -> Grants beskar & opens Galactic Market
+        elements.btnSellShop.addEventListener('click', () => {
+            elements.modalShop.close();
+            window.dispatchEvent(new Event('verdikaSellShop'));
+        });
+
+        // UI refresh listener
         window.addEventListener('verdikaUpdateShopUI', (e) => {
             if (e.detail && e.detail.beskar !== undefined) {
                 elements.shopBeskarVal.innerText = e.detail.beskar;
+                elements.marketBeskarVal.innerText = e.detail.beskar;
             }
         });
 
-        window.addEventListener('verdikaOpenShop', () => {
-            elements.modalShop.showModal();
+        window.addEventListener('verdikaOpenShop', () => { elements.modalShop.showModal(); });
+
+        // Market Generation
+        window.addEventListener('verdikaOpenMarket', (e) => {
+            elements.marketPanel.style.display = 'flex';
+            elements.marketItemsContainer.innerHTML = '';
+
+            const availableItems = e.detail.items;
+            
+            availableItems.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'market-card';
+                card.innerHTML = `
+                    <div>
+                        <h4>${item.name} <span class="badge">${item.type.toUpperCase()}</span></h4>
+                        <p>${item.desc}</p>
+                    </div>
+                    <button class="main-menu__button shop-btn" data-id="${item.id}" data-cost="${item.cost}">
+                        Buy - ${item.cost} Beskar
+                    </button>
+                `;
+                elements.marketItemsContainer.appendChild(card);
+            });
+
+            // Attach dynamic buy listeners
+            const marketBuyBtns = elements.marketItemsContainer.querySelectorAll('.shop-btn');
+            marketBuyBtns.forEach(btn => {
+                btn.addEventListener('click', (ev) => {
+                    const id = ev.target.getAttribute('data-id');
+                    const cost = parseInt(ev.target.getAttribute('data-cost'), 10);
+                    window.dispatchEvent(new CustomEvent('verdikaBuyMarketItem', { detail: { id, cost } }));
+                });
+            });
+        });
+
+        // Market skip
+        elements.btnSkipMarket.addEventListener('click', () => {
+            elements.marketPanel.style.display = 'none';
+            window.dispatchEvent(new Event('verdikaCloseMarket'));
+        });
+        
+        // Auto-close market successfully bought item
+        window.addEventListener('verdikaMarketPurchaseSuccess', () => {
+            elements.marketPanel.style.display = 'none';
+            window.dispatchEvent(new Event('verdikaCloseMarket'));
         });
     }
 
@@ -137,15 +143,11 @@ const VerdikaUtilities = (function() {
             elements.btnResumeGame.style.display = 'inline-block'; 
             elements.btnQuitGame.style.display = 'inline-block';   
             elements.btnCloseSettings.style.display = 'none';
-            
             window.dispatchEvent(new Event('verdikaPauseGame'));
             elements.modalSettings.showModal();
         });
 
-        elements.btnCloseSettings.addEventListener('click', () => {
-            elements.modalSettings.close();
-        });
-
+        elements.btnCloseSettings.addEventListener('click', () => elements.modalSettings.close() );
         elements.btnResumeGame.addEventListener('click', () => {
             elements.modalSettings.close();
             window.dispatchEvent(new Event('verdikaResumeGame'));
@@ -167,91 +169,15 @@ const VerdikaUtilities = (function() {
         });
     }
 
-    class HealthMonitor {
-        constructor() {
-            this.frameCount = 0;
-            this.lastTime = performance.now();
-            this.measureFPS = this.measureFPS.bind(this);
-            requestAnimationFrame(this.measureFPS);
-        }
-
-        measureFPS(currentTime) {
-            const delta = currentTime - this.lastTime;
-            this.frameCount++;
-            
-            if (delta >= 1000) {
-                const fps = Math.round((this.frameCount * 1000) / delta);
-                const fpsGauge = Math.min(100, Math.round((fps / 60) * 100));
-                this.updateGauges(fpsGauge, this.measureDOM(), this.measureMemory());
-                this.frameCount = 0;
-                this.lastTime = currentTime;
-            }
-            requestAnimationFrame(this.measureFPS);
-        }
-
-        measureDOM() {
-            const elementsCount = document.getElementsByTagName('*').length;
-            return Math.min(100, Math.round((elementsCount / 1500) * 100));
-        }
-
-        measureMemory() {
-            if (performance && performance.memory) {
-                const memoryUsed = performance.memory.usedJSHeapSize;
-                const memoryLimit = performance.memory.jsHeapSizeLimit;
-                return Math.min(100, Math.round((memoryUsed / memoryLimit) * 100));
-            }
-            return 0; 
-        }
-
-        updateGauges(fps, dom, mem) {
-            if (elements.healthGaugesTarget) {
-                elements.healthGaugesTarget.innerHTML = `
-                    <p>Version: 1.1.5 | Offline-first survival roguelite.</p>
-                    <h4>Diagnostic Gauges</h4>
-                    <p>FPS Engine: ${fps}%</p>
-                    <p>DOM Bloat: ${dom}%</p>
-                    <p>Memory Footprint: ${mem}%</p>
-                `;
-            }
-        }
-    }
-
-    function initParkingLot() {
-        let notes = [
-            'Design Holographic Comm-Puck Projection UI for Threat Log'
-        ];
-
-        try {
-            const savedNotes = localStorage.getItem('verdika_parking_lot');
-            if (savedNotes) {
-                notes = JSON.parse(savedNotes);
-            }
-        } catch (e) {
-            console.warn('OpSec: LocalStorage access blocked.');
-        }
-
-        elements.parkingLot.innerHTML = '<h3>Parking Lot Backlog</h3>';
-        notes.forEach(note => {
-            const p = document.createElement('p');
-            p.textContent = '- ' + note;
-            elements.parkingLot.appendChild(p);
-        });
-    }
-
     return {
         init: function() {
             hydrateElements(); 
             initHelp();
-            initThreatLog();
+            initShopAndMarket();
             initModals();
-            initShop();
-            initParkingLot();
-            new HealthMonitor(); 
         }
     };
 
 })();
 
-document.addEventListener('DOMContentLoaded', () => {
-    VerdikaUtilities.init();
-});
+document.addEventListener('DOMContentLoaded', () => { VerdikaUtilities.init(); });
