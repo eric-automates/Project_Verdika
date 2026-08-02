@@ -6,13 +6,10 @@ Project: Project_Verdika
 Description: Zero-dependency, offline-first HTML5 foundation for the game.
              Acts as the primary canvas container and utility layer host.
 Architecture Rules:
-  - Uses strict HTML5 standards per IBM Best Practices[span_5](start_span)[span_5](end_span).
-  - UTF-8 charset is strictly the first element in <head> to optimize rendering[span_6](start_span)[span_6](end_span)[span_7](start_span)[span_7](end_span).
-  - Semantic structure separating utilities (<header>/<nav>) from the game (<main>)[span_8](start_span)[span_8](end_span).
-  - No "type" attributes on script or style tags per HTML5 guidelines[span_9](start_span)[span_9](end_span)[span_10](start_span)[span_10](end_span).
-Mandatory Update Points:
-  - Any new global CSS variables or stylesheets must be linked in the <head> before scripts.
-  - All input fields must use a matching <label> for accessibility[span_11](start_span)[span_11](end_span).
+  - Uses strict HTML5 standards per IBM Best Practices.
+  - UTF-8 charset is strictly the first element in <head> to optimize rendering.
+  - Semantic structure separating utilities (<header>/<nav>) from the game (<main>).
+  - No "type" attributes on script or style tags per HTML5 guidelines.
 =============================================================================
 -->
 <html lang="en">
@@ -25,12 +22,10 @@ Mandatory Update Points:
     
     <link rel="stylesheet" href="css/styles.css">
     
-    <!-- Scripts loaded synchronously; execution relies on DOMContentLoaded -->
     <script src="js/utilities.js"></script>
     <script src="js/game.js"></script>
 </head>
 <body>
-    <!-- MANDATORY UTILITIES LAYER -->
     <header>
         <nav>
             <button id="btn-help">Help</button>
@@ -39,22 +34,15 @@ Mandatory Update Points:
                 <p>Drag anywhere on the screen to move. Your Verd'ika will auto-fire at the nearest target.</p>
                 <button id="btn-threat-log" class="main-menu__button">Threat Assessment Log</button>
                 <hr>
-                <div id="health-gauges">
-                    <!-- Version, backstory, health gauges render here -->
-                </div>
+                <div id="health-gauges"></div>
             </div>
-            <div id="parking-lot" style="display: none;">
-                <!-- Future features backlog -->
-            </div>
-            
+            <div id="parking-lot" style="display: none;"></div>
             <button id="btn-pause" style="display: none;">Pause / Settings</button>
         </nav>
     </header>
 
-    <!-- CORE GAME LAYER -->
     <main id="game-container">
         
-        <!-- IN-GAME HUD OVERLAY -->
         <div id="game-hud" class="game-hud glass-panel" style="display: none;">
             <div class="hud-stat">
                 <span class="hud-label">WAVE</span>
@@ -66,7 +54,6 @@ Mandatory Update Points:
             </div>
         </div>
 
-        <!-- MAIN MENU -->
         <section id="main-menu" class="main-menu glass-panel">
             <div class="main-menu__header">
                 <h1>Verd'ika: Resol'nare</h1>
@@ -91,37 +78,44 @@ Mandatory Update Points:
             </div>
         </section>
 
-        <!-- GAME OVER SCREEN -->
         <section id="game-over" class="main-menu glass-panel" style="display: none;">
             <h1>Raid Failed</h1>
             <p id="game-over-stats"></p>
             <button id="btn-restart" class="main-menu__button main-menu__button--primary">Return to Menu</button>
         </section>
 
-        <!-- BETWEEN-WAVE SHOP MODAL -->
         <dialog id="modal-shop" class="modal-panel glass-panel">
             <h2>The Foundry</h2>
-            <p>Forge your equipment before the next wave.</p>
             <p>Available Beskar: <span id="shop-beskar-val" class="hud-value--gold">0</span></p>
             <div class="shop-items">
                 <button id="btn-buy-hp" class="main-menu__button shop-btn" data-type="hp" data-cost="50">Reinforce Armor (+20 HP) - 50 Beskar</button>
                 <button id="btn-buy-speed" class="main-menu__button shop-btn" data-type="speed" data-cost="75">Tune Servos (+10% Speed) - 75 Beskar</button>
                 <button id="btn-buy-dmg" class="main-menu__button shop-btn" data-type="damage" data-cost="100">Overcharge Blaster (+2 Dmg) - 100 Beskar</button>
+                <button id="btn-sell-shop" class="main-menu__button main-menu__button--danger">Sell Blueprints (+75 Beskar)</button>
             </div>
             <hr>
             <button id="btn-close-shop" class="main-menu__button main-menu__button--primary">Deploy to Next Wave</button>
         </dialog>
 
-        <!-- SETTINGS / PAUSE MODAL -->
+        <!-- GALACTIC MARKET OVERLAY -->
+        <section id="galactic-market" class="market-panel" style="display: none;">
+            <div class="market-panel__header">
+                <h2>Galactic Market</h2>
+                <p>Black Market Network Accessed. Available Beskar: <span id="market-beskar-val" class="hud-value--gold">0</span></p>
+            </div>
+            <div id="market-items-container" class="market-items">
+                <!-- Populated dynamically via utilities.js -->
+            </div>
+            <div class="market-panel__actions">
+                <button id="btn-skip-market" class="main-menu__button main-menu__button--primary">Skip & Deploy Next Wave</button>
+            </div>
+        </section>
+
         <dialog id="modal-settings" class="modal-panel glass-panel">
             <h2>Settings</h2>
             <div class="settings-group">
                 <label for="toggle-audio">Audio:</label>
                 <input type="checkbox" id="toggle-audio" checked>
-            </div>
-            <div class="settings-group">
-                <label for="toggle-particles">Particles (Performance):</label>
-                <input type="checkbox" id="toggle-particles" checked>
             </div>
             <hr>
             <button id="btn-resume-game" class="main-menu__button">Resume Raid</button>
@@ -129,32 +123,21 @@ Mandatory Update Points:
             <button id="btn-close-settings" class="main-menu__button">Close Settings</button>
         </dialog>
 
-        <!-- QUIT CONFIRMATION MODAL -->
         <dialog id="modal-quit-confirm" class="modal-panel glass-panel">
             <h2>Abandon Raid?</h2>
-            <p>Are you sure you want to quit? You will lose all Beskar Scrap gathered this wave.</p>
             <button id="btn-confirm-quit" class="main-menu__button main-menu__button--danger">Yes, Abandon</button>
             <button id="btn-cancel-quit" class="main-menu__button">No, Keep Fighting</button>
         </dialog>
 
-        <!-- THREAT ASSESSMENT LOG MODAL -->
         <dialog id="modal-threat-log" class="modal-panel modal-panel--large glass-panel">
             <div class="threat-log-header">
                 <h2>Threat Assessment Log</h2>
                 <button id="btn-close-threat-log" class="close-btn">&times;</button>
             </div>
-            <div class="threat-scaling-info">
-                <strong>Combat Scaling:</strong> Hostile targets scale dynamically. Base Health increases by 10% cumulatively per wave.
-            </div>
-            <div id="threat-list" class="threat-list">
-                <!-- Dynamically populated from utilities.js -->
-            </div>
+            <div id="threat-list" class="threat-list"></div>
         </dialog>
 
-        <!-- GAME CANVAS -->
         <canvas id="game-canvas"></canvas>
-        
     </main>
 </body>
-                                                           </html>
-                                                             
+</html>
