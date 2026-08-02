@@ -1,14 +1,14 @@
 /**
  * =============================================================================
- * File: game.js (Part 1 of 2)
+ * File: game.js (Part 1 of 3)
  * Project: Project_Verdika
  * Description: Core logic loop, object rendering, and player/particle models.
  * Architecture Rules:
- *   - Zero-Dependency: Uses requestAnimationFrame for native 60FPS looping[span_15](start_span)[span_15](end_span).
- *   - OpSec/Privacy: Resilient against strict-browser storage blocking[span_16](start_span)[span_16](end_span).
- *   - Modularity: Wraps all logic in an IIFE, attached explicitly to window[span_17](start_span)[span_17](end_span).
+ *   - Zero-Dependency: Uses requestAnimationFrame for native 60FPS looping.
+ *   - OpSec/Privacy: Resilient against strict-browser storage blocking.
+ *   - Modularity: Wraps all logic in an IIFE, attached explicitly to window.
  * Mandatory Update Points:
- *   - Any new enemy archetypes MUST be added to the ENEMY_DICTIONARY[span_18](start_span)[span_18](end_span).
+ *   - Any new enemy archetypes MUST be added to the ENEMY_DICTIONARY.
  * =============================================================================
  */
 
@@ -38,7 +38,8 @@ window.VerdikaGame = (function() {
         player: null,
         enemies: [],
         projectiles: [],
-        particles: []
+        particles: [],
+        loot: [] // Holds physical drops
     };
 
     const ARCHETYPES = {
@@ -176,6 +177,44 @@ window.VerdikaGame = (function() {
             ctx.closePath();
         }
     }
+    /**
+ * =============================================================================
+ * File: game.js (Part 2 of 3)
+ * =============================================================================
+ */
+    class Loot {
+        constructor(x, y, amount) {
+            this.x = x;
+            this.y = y;
+            this.amount = amount;
+            this.radius = 6;
+            this.color = '#ffd700'; 
+            this.active = true;
+            this.pulse = 0;
+        }
+
+        update() {
+            this.pulse += 0.1;
+            this.radius = 6 + Math.sin(this.pulse) * 1.5;
+        }
+
+        render() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = this.color;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = this.color;
+            ctx.fill();
+            ctx.shadowBlur = 0; 
+            ctx.closePath();
+
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius * 0.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            ctx.closePath();
+        }
+    }
 
     class Player {
         constructor(archetypeKey) {
@@ -184,7 +223,7 @@ window.VerdikaGame = (function() {
             this.maxHp = stats.baseHp;
             this.armor = stats.baseArmor;
             this.maxSpeed = stats.speed; 
-            this.damageMod = 0; // Accumulated via shop
+            this.damageMod = 0; 
             
             this.x = canvas.width / 2;
             this.y = canvas.height / 2;
@@ -253,8 +292,9 @@ window.VerdikaGame = (function() {
             ctx.fillStyle = 'green';
             ctx.fillRect(this.x - 15, this.y - 24, 30 * Math.max(0, (this.hp / this.maxHp)), 4);
         }
-                    }
-                         class Enemy {
+    }
+
+    class Enemy {
         constructor(typeKey, startX, startY, currentWave, indexId) {
             const stats = ENEMY_DICTIONARY[typeKey] || ENEMY_DICTIONARY['acolyte'];
             this.type = typeKey;
@@ -489,8 +529,12 @@ window.VerdikaGame = (function() {
             ctx.fillStyle = 'green';
             ctx.fillRect(this.x - 12, this.y - (this.radius + 8), 24 * Math.max(0, (this.hp / this.maxHp)), 3);
         }
-    }
-
+        }
+   /**
+ * =============================================================================
+ * File: game.js (Part 3 of 3)
+ * =============================================================================
+ */
     function spawnWave(waveNumber) {
         const enemyCount = waveNumber * 4 + 2;
         const enemyTypes = Object.keys(ENEMY_DICTIONARY);
@@ -526,7 +570,8 @@ window.VerdikaGame = (function() {
                     
                     if (e.hp <= 0) {
                         e.active = false;
-                        gameState.beskarScrap += (e.type === 'mudhorn') ? 100 : 10; 
+                        const dropAmount = (e.type === 'mudhorn') ? 100 : 10;
+                        ACTIVE_ENTITIES.loot.push(new Loot(e.x, e.y, dropAmount));
                     }
                     break; 
                 }
@@ -561,6 +606,7 @@ window.VerdikaGame = (function() {
 
         if (ACTIVE_ENTITIES.player) {
             const p = ACTIVE_ENTITIES.player;
+            
             ACTIVE_ENTITIES.enemies.forEach(e => {
                 const dx = p.x - e.x;
                 const dy = p.y - e.y;
@@ -586,6 +632,17 @@ window.VerdikaGame = (function() {
                     }
                 }
             });
+
+            // Loot pickup handling
+            for (let i = ACTIVE_ENTITIES.loot.length - 1; i >= 0; i--) {
+                const l = ACTIVE_ENTITIES.loot[i];
+                const dist = Math.hypot(p.x - l.x, p.y - l.y);
+                if (dist < p.radius + l.radius) {
+                    gameState.beskarScrap += l.amount;
+                    l.active = false;
+                    window.dispatchEvent(new CustomEvent('verdikaUpdateShopUI', { detail: { beskar: gameState.beskarScrap } }));
+                }
+            }
         }
     }
 
@@ -603,6 +660,7 @@ window.VerdikaGame = (function() {
         ACTIVE_ENTITIES.enemies = [];
         ACTIVE_ENTITIES.projectiles = [];
         ACTIVE_ENTITIES.particles = [];
+        ACTIVE_ENTITIES.loot = [];
         gameState.wave = 1;
         gameState.beskarScrap = 0;
         inputState.isDragging = false;
@@ -643,6 +701,9 @@ window.VerdikaGame = (function() {
         ACTIVE_ENTITIES.particles.forEach(p => p.update());
         ACTIVE_ENTITIES.particles = ACTIVE_ENTITIES.particles.filter(p => p.life > 0);
 
+        ACTIVE_ENTITIES.loot.forEach(l => l.update());
+        ACTIVE_ENTITIES.loot = ACTIVE_ENTITIES.loot.filter(l => l.active);
+
         checkCollisions();
 
         if (ACTIVE_ENTITIES.enemies.length === 0 && ACTIVE_ENTITIES.player && gameState.isRunning && !gameState.isShopping) {
@@ -672,6 +733,8 @@ window.VerdikaGame = (function() {
         ACTIVE_ENTITIES.projectiles.forEach(p => p.render());
         
         ACTIVE_ENTITIES.particles.forEach(p => p.render());
+        
+        ACTIVE_ENTITIES.loot.forEach(l => l.render());
     }
 
     function saveProgress() {
@@ -796,4 +859,4 @@ window.VerdikaGame = (function() {
 document.addEventListener('DOMContentLoaded', () => {
     window.VerdikaGame.init();
 });
-      
+                
