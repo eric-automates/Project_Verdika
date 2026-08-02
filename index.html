@@ -6,10 +6,13 @@ Project: Project_Verdika
 Description: Zero-dependency, offline-first HTML5 foundation for the game.
              Acts as the primary canvas container and utility layer host.
 Architecture Rules:
-  - Uses strict HTML5 standards per IBM Best Practices.
-  - UTF-8 charset is strictly the first element in <head> to optimize rendering.
+  - Uses strict HTML5 standards per IBM Best Practices[span_3](start_span)[span_3](end_span).
+  - UTF-8 charset is strictly the first element in <head> to optimize rendering[span_4](start_span)[span_4](end_span).
   - Semantic structure separating utilities (<header>/<nav>) from the game (<main>).
-  - No "type" attributes on script or style tags per HTML5 guidelines.
+  - No "type" attributes on script or style tags per HTML5 guidelines[span_5](start_span)[span_5](end_span).
+Mandatory Update Points:
+  - Any new global CSS variables or stylesheets must be linked in the <head> before scripts.
+  - All input fields must use a matching <label> for accessibility[span_6](start_span)[span_6](end_span).
 =============================================================================
 -->
 <html lang="en">
@@ -54,6 +57,11 @@ Architecture Rules:
             </div>
         </div>
 
+        <!-- NEW: Manual transition button post-wave -->
+        <button id="btn-go-foundry" class="main-menu__button main-menu__button--primary" style="display: none; position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 95; width: auto;">
+            Go to Foundry
+        </button>
+
         <section id="main-menu" class="main-menu glass-panel">
             <div class="main-menu__header">
                 <h1>Verd'ika: Resol'nare</h1>
@@ -88,9 +96,9 @@ Architecture Rules:
             <h2>The Foundry</h2>
             <p>Available Beskar: <span id="shop-beskar-val" class="hud-value--gold">0</span></p>
             <div class="shop-items">
-                <button id="btn-buy-hp" class="main-menu__button shop-btn" data-type="hp" data-cost="50">Reinforce Armor (+20 HP) - 50 Beskar</button>
-                <button id="btn-buy-speed" class="main-menu__button shop-btn" data-type="speed" data-cost="75">Tune Servos (+10% Speed) - 75 Beskar</button>
-                <button id="btn-buy-dmg" class="main-menu__button shop-btn" data-type="damage" data-cost="100">Overcharge Blaster (+2 Dmg) - 100 Beskar</button>
+                <button class="main-menu__button shop-btn" data-type="hp" data-cost="50">Reinforce Armor (+20 HP) - 50 Beskar</button>
+                <button class="main-menu__button shop-btn" data-type="speed" data-cost="75">Tune Servos (+10% Speed) - 75 Beskar</button>
+                <button class="main-menu__button shop-btn" data-type="damage" data-cost="100">Overcharge Blaster (+2 Dmg) - 100 Beskar</button>
                 <button id="btn-sell-shop" class="main-menu__button main-menu__button--danger">Sell Blueprints (+75 Beskar)</button>
             </div>
             <hr>
@@ -100,14 +108,14 @@ Architecture Rules:
         <!-- GALACTIC MARKET OVERLAY -->
         <section id="galactic-market" class="market-panel" style="display: none;">
             <div class="market-panel__header">
-                <h2>Galactic Market</h2>
-                <p>Black Market Network Accessed. Available Beskar: <span id="market-beskar-val" class="hud-value--gold">0</span></p>
+                <h2>Galactic Market Terminal</h2>
+                <p>Uplink Established. Encrypted network. Available Beskar: <span id="market-beskar-val" class="hud-value--gold">0</span></p>
             </div>
             <div id="market-items-container" class="market-items">
                 <!-- Populated dynamically via utilities.js -->
             </div>
             <div class="market-panel__actions">
-                <button id="btn-skip-market" class="main-menu__button main-menu__button--primary">Skip & Deploy Next Wave</button>
+                <button id="btn-skip-market" class="market-btn">Close Terminal & Deploy Next Wave</button>
             </div>
         </section>
 
