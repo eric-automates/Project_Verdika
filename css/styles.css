@@ -2,21 +2,19 @@
 =============================================================================
 File: styles.css
 Project: Project_Verdika
-Description: Global stylesheet utilizing top-level CSS variables, BEM naming,
+Description: Global stylesheet utilizing top-level CSS variables, BEM naming[span_19](start_span)[span_19](end_span),
              glassmorphism panels, and strict viewport locking for mobile drag.
 Architecture Rules:
-  - Uses BEM (Block__Element--Modifier) convention for all UI components.
-  - Uses a CSS Reset to ensure cross-browser consistency.
-  - Never use the !important flag. Control overrides via accurate CSS specificity.
+  - Uses BEM (Block__Element--Modifier) convention for all UI components[span_20](start_span)[span_20](end_span).
+  - Uses a CSS Reset to ensure cross-browser consistency[span_21](start_span)[span_21](end_span).
+  - Never use the !important flag. Control overrides via accurate CSS specificity[span_22](start_span)[span_22](end_span).
 =============================================================================
 */
 
-/* --- 1. CSS RESET & VIEWPORT LOCKING --- */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    /* Removed global touch-action: none; to fix Threat Log scrolling */
     user-select: none;
     -webkit-user-select: none;
 }
@@ -33,7 +31,6 @@ html, body {
     background: radial-gradient(circle at center, #1a1a2e 0%, var(--color-dark-bg) 100%);
 }
 
-/* --- 2. TOP-LEVEL VARIABLES --- */
 :root {
     --color-durasteel-rust: #8b5a2b;
     --color-beskar-silver: #c0c0c0;
@@ -55,7 +52,6 @@ html, body {
     --spacing-xl: 32px;
 }
 
-/* --- 3. GLASSMORPHISM & UI PANELS --- */
 .glass-panel {
     background-color: var(--color-panel-bg);
     backdrop-filter: blur(12px);
@@ -65,10 +61,9 @@ html, body {
     border-radius: 12px;
 }
 
-/* --- 4. IN-GAME HUD OVERLAY --- */
 .game-hud {
     position: absolute;
-    top: 60px; /* Safely placed below the header buttons */
+    top: 60px; 
     left: 16px;
     display: flex;
     gap: var(--spacing-md);
@@ -102,7 +97,6 @@ html, body {
     color: var(--color-gold);
 }
 
-/* --- 5. BEM MENU STYLING --- */
 .main-menu {
     display: flex;
     flex-direction: column;
@@ -201,7 +195,6 @@ html, body {
     color: #fff;
 }
 
-/* Modals */
 .modal-panel {
     color: var(--color-beskar-silver);
     padding: var(--spacing-lg);
@@ -214,11 +207,18 @@ html, body {
     max-width: 650px;
     max-height: 80vh;
     overflow-y: auto;
-    touch-action: pan-y; /* Explicitly allows vertical scrolling on touch */
+    touch-action: pan-y; 
 }
 
 dialog::backdrop {
     background: rgba(0, 0, 0, 0.85);
+}
+
+.shop-items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    margin: var(--spacing-md) 0;
 }
 
 .threat-log-header {
@@ -297,7 +297,6 @@ dialog::backdrop {
     margin-left: 8px;
 }
 
-/* --- 6. UTILITIES LAYER (Header/Nav) --- */
 header {
     position: absolute;
     top: 0;
@@ -341,7 +340,6 @@ nav button:hover {
     color: var(--color-reliability-blue);
 }
 
-/* Game Canvas Locked to prevent dragging game screen around */
 #game-canvas {
     position: absolute;
     top: 0;
