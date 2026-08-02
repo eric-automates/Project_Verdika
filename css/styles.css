@@ -1,13 +1,9 @@
 /*
 =============================================================================
-File: styles.css
+File: styles.css (Part 1)
 Project: Project_Verdika
-Description: Global stylesheet utilizing top-level CSS variables, BEM naming[span_19](start_span)[span_19](end_span),
-             glassmorphism panels, and strict viewport locking for mobile drag.
-Architecture Rules:
-  - Uses BEM (Block__Element--Modifier) convention for all UI components[span_20](start_span)[span_20](end_span).
-  - Uses a CSS Reset to ensure cross-browser consistency[span_21](start_span)[span_21](end_span).
-  - Never use the !important flag. Control overrides via accurate CSS specificity[span_22](start_span)[span_22](end_span).
+Description: Global stylesheet with top-level CSS variables and strict viewport 
+             locking to prevent mobile drag. Added Deep-Space Market Theme.
 =============================================================================
 */
 
@@ -39,11 +35,11 @@ html, body {
     --color-reliability-blue: #4682b4;
     --color-lust-orange: #ff8c00;
     --color-dark-bg: #0a0a0a;
+    --color-market-bg: #05050a;
     --color-panel-bg: rgba(20, 20, 30, 0.75);
     
     --glow-primary: 0 0 15px rgba(139, 0, 0, 0.6);
     --glow-secondary: 0 0 10px rgba(192, 192, 192, 0.3);
-
     --font-primary: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 
     --spacing-sm: 8px;
@@ -85,17 +81,13 @@ html, body {
     letter-spacing: 1px;
 }
 
-.hud-value {
+.hud-value, .hud-value--gold {
     font-size: 1.1rem;
     font-weight: bold;
     color: #ffffff;
 }
 
-.hud-value--gold {
-    font-size: 1.1rem;
-    font-weight: bold;
-    color: var(--color-gold);
-}
+.hud-value--gold { color: var(--color-gold); }
 
 .main-menu {
     display: flex;
@@ -153,6 +145,11 @@ html, body {
     gap: var(--spacing-md);
     width: 100%;
 }
+/*
+=============================================================================
+File: styles.css (Part 2)
+=============================================================================
+*/
 
 .main-menu__button {
     background-color: rgba(139, 90, 43, 0.8);
@@ -175,10 +172,7 @@ html, body {
     box-shadow: 0 0 15px var(--color-durasteel-rust);
 }
 
-.main-menu__button--primary {
-    background-color: rgba(139, 0, 0, 0.85);
-}
-
+.main-menu__button--primary { background-color: rgba(139, 0, 0, 0.85); }
 .main-menu__button--primary:hover {
     background-color: var(--color-honor-red);
     box-shadow: var(--glow-primary);
@@ -210,9 +204,7 @@ html, body {
     touch-action: pan-y; 
 }
 
-dialog::backdrop {
-    background: rgba(0, 0, 0, 0.85);
-}
+dialog::backdrop { background: rgba(0, 0, 0, 0.85); }
 
 .shop-items {
     display: flex;
@@ -221,96 +213,87 @@ dialog::backdrop {
     margin: var(--spacing-md) 0;
 }
 
-.threat-log-header {
+/* GALACTIC MARKET STYLES */
+.market-panel {
+    background-color: rgba(5, 5, 15, 0.98);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 150;
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
     align-items: center;
-    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-xl);
+    overflow-y: auto;
+    touch-action: pan-y;
 }
 
-.close-btn {
-    background: none;
-    border: none;
-    color: var(--color-beskar-silver);
-    font-size: 2rem;
-    cursor: pointer;
-}
-
-.close-btn:hover {
-    color: var(--color-honor-red);
-}
-
-.threat-scaling-info {
-    background: rgba(255, 215, 0, 0.1);
-    border-left: 4px solid var(--color-gold);
-    padding: 10px;
-    font-size: 0.85rem;
+.market-panel__header {
+    text-align: center;
     margin-bottom: var(--spacing-lg);
 }
 
-.threat-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-md);
+.market-panel__header h2 {
+    color: var(--color-reliability-blue);
+    font-size: 2rem;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    text-shadow: 0 0 10px var(--color-reliability-blue);
 }
 
-.threat-card {
-    background-color: rgba(0, 0, 0, 0.45);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+.market-items {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md);
+    width: 100%;
+    max-width: 700px;
+    margin-bottom: var(--spacing-lg);
+}
+
+.market-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(70, 130, 180, 0.4);
+    padding: var(--spacing-md);
     border-radius: 8px;
     display: flex;
-    align-items: center;
-    padding: var(--spacing-md);
+    flex-direction: column;
+    justify-content: space-between;
+    text-align: left;
 }
 
-.threat-card__visual {
-    flex: 0 0 75px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-right: var(--spacing-md);
+.market-card:hover {
+    background: rgba(70, 130, 180, 0.1);
+    border-color: var(--color-reliability-blue);
+    box-shadow: 0 0 15px rgba(70, 130, 180, 0.4);
 }
 
-.threat-card__info {
-    flex: 1;
-}
-
-.threat-card h4 {
+.market-card h4 {
     color: var(--color-gold);
     margin-bottom: 4px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
 }
 
-.threat-card p {
+.market-card p {
     font-size: 0.85rem;
-    margin-bottom: 2px;
+    margin-bottom: var(--spacing-sm);
+    flex-grow: 1;
 }
 
-.badge {
-    display: inline-block;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: bold;
-    color: #fff;
-    margin-left: 8px;
+.market-panel__actions {
+    width: 100%;
+    max-width: 400px;
+    margin-top: auto;
 }
 
 header {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
+    top: 0; left: 0; width: 100%;
     padding: var(--spacing-md);
     z-index: 100;
     pointer-events: none; 
 }
 
-nav {
-    display: flex;
-    justify-content: space-between;
-}
+nav { display: flex; justify-content: space-between; }
 
 nav button {
     background-color: rgba(139, 90, 43, 0.85);
@@ -326,26 +309,12 @@ nav button {
     touch-action: auto;
 }
 
-nav button:hover {
-    background-color: var(--color-durasteel-rust);
-}
+nav button:hover { background-color: var(--color-durasteel-rust); }
 
-#dropdown-about {
-    pointer-events: auto; 
-    margin-top: var(--spacing-sm);
-}
-
-#health-gauges {
-    font-size: 0.85rem;
-    color: var(--color-reliability-blue);
-}
-
+#dropdown-about { pointer-events: auto; margin-top: var(--spacing-sm); }
 #game-canvas {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0; left: 0; width: 100%; height: 100%;
     z-index: 10;
     touch-action: none;
 }
