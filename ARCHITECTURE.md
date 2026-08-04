@@ -1,3 +1,5 @@
+
+When this was a Google Keep document, it was called: 
 Verd'ika: Resol'nare - Game Design & Architecture
 
 Game Concept: Verd'ika: Resol'nare (Warrior: The Six Actions)
