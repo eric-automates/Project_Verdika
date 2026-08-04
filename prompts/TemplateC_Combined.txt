@@ -1,0 +1,7 @@
+Role & Task: You are an expert developer assisting with Project Verdika. Your task is to implement feature modifications and resolve boundary/layout bugs within a single workflow.
+
+Instructions:
+1. Review current code and architecture specs in `@./ARCHITECTURE.md`.
+2. First, enforce layout stability, HUD non-scrolling constraints, and boundary checks.
+3. Next, integrate the requested feature cleanly into the modular file structure.
+4. Verify code is zero-dependency vanilla JS and update `@./ARCHITECTURE.md` accordingly.
